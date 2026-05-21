@@ -110,6 +110,7 @@ let posts: Post[] = [];
 let comments: Comment[] = [];
 let initialized = false;
 const listeners = new Set<() => void>();
+let latestSnapshot: { posts: Post[]; comments: Comment[] } = { posts: SEED, comments: SEED_COMMENTS };
 
 function init() {
   if (initialized || typeof window === "undefined") return;
@@ -122,6 +123,7 @@ function persist() {
   if (typeof window === "undefined") return;
   localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
   localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
+  latestSnapshot = { posts, comments };
   listeners.forEach((l) => l());
 }
 
@@ -133,7 +135,7 @@ function subscribe(l: () => void) {
 
 function snapshot() {
   init();
-  return { posts, comments };
+  return latestSnapshot;
 }
 
 const serverSnapshot = { posts: SEED, comments: SEED_COMMENTS };
@@ -237,4 +239,4 @@ export const REACTION_META: Record<Reaction, { label: string; emoji: string }> =
   fire: { label: "cursed", emoji: "🔥" },
 };
 
-export const TOOLS = ["Claude", "ChatGPT", "Cursor", "Copilot", "Gemini", "Lovable", "v0", "Other"];
+export const TOOLS = ["Claude", "ChatGPT", "Cursor", "Copilot", "Gemini", "v0", "Other"];
