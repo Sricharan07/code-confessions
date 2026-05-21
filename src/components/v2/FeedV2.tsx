@@ -4,7 +4,7 @@ import { timeAgo } from "@/lib/store";
 
 export function FeedV2() {
   const [tab, setTab] = useState<"for-you" | "following">("for-you");
-  const { posts } = useStore();
+  const { posts, user } = useStore();
 
   const visible = posts.filter(p => !p.hidden).sort((a, b) => {
     if (tab === "for-you") {
