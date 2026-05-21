@@ -113,7 +113,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Header />
       <Outlet />
+      <footer className="mt-24 border-t-2 border-ink py-8 mono text-xs text-center">
+        VIBEFAIL · made with regret · <a href="/" className="underline">no logins, no rules, just receipts</a>
+      </footer>
     </QueryClientProvider>
   );
 }
