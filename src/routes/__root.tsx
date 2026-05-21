@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import { Header } from "@/components/Header";
 
 function NotFoundComponent() {
   return (
@@ -72,11 +73,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "VibeFail — Post the worst thing AI did to your code" },
+      { name: "description", content: "Anonymous confessions from vibe coders. The wall of AI-assisted disasters." },
+      { name: "author", content: "VibeFail" },
+      { property: "og:title", content: "VibeFail — confessions from vibe coders" },
+      { property: "og:description", content: "Post the worst thing AI did to your code." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
@@ -113,7 +114,11 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <Header />
       <Outlet />
+      <footer className="mt-24 border-t-2 border-ink py-8 mono text-xs text-center">
+        VIBEFAIL · made with regret · <a href="/" className="underline">no logins, no rules, just receipts</a>
+      </footer>
     </QueryClientProvider>
   );
 }
