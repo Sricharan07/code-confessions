@@ -110,6 +110,21 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  const isV2 = router.state.location.pathname.startsWith('/v2');
+
+  if (isV2) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="flex flex-col h-screen overflow-hidden">
+          <Header />
+          <div className="flex-1 overflow-hidden">
+            <Outlet />
+          </div>
+        </div>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>

@@ -108,14 +108,17 @@ function load<T>(key: string, seed: T): T {
 
 let posts: Post[] = [];
 let comments: Comment[] = [];
+let user: any = null;
 let initialized = false;
 const listeners = new Set<() => void>();
-let latestSnapshot: { posts: Post[]; comments: Comment[] } = { posts: SEED, comments: SEED_COMMENTS };
+let latestSnapshot: { posts: Post[]; comments: Comment[]; user: any } = { posts: SEED, comments: SEED_COMMENTS, user: null };
 
 function init() {
   if (initialized || typeof window === "undefined") return;
   posts = load(POSTS_KEY, SEED);
   comments = load(COMMENTS_KEY, SEED_COMMENTS);
+  user = load("vibefail.user.v1", null);
+  latestSnapshot = { posts, comments, user };
   initialized = true;
 }
 
@@ -123,7 +126,8 @@ function persist() {
   if (typeof window === "undefined") return;
   localStorage.setItem(POSTS_KEY, JSON.stringify(posts));
   localStorage.setItem(COMMENTS_KEY, JSON.stringify(comments));
-  latestSnapshot = { posts, comments };
+  localStorage.setItem("vibefail.user.v1", JSON.stringify(user));
+  latestSnapshot = { posts, comments, user };
   listeners.forEach((l) => l());
 }
 
@@ -138,10 +142,22 @@ function snapshot() {
   return latestSnapshot;
 }
 
-const serverSnapshot = { posts: SEED, comments: SEED_COMMENTS };
+const serverSnapshot = { posts: SEED, comments: SEED_COMMENTS, user: null };
 
 export function useStore() {
   return useSyncExternalStore(subscribe, snapshot, () => serverSnapshot);
+}
+
+export function setAuthUser(u: any) {
+  init();
+  user = u;
+  persist();
+}
+
+export function logout() {
+  init();
+  user = null;
+  persist();
 }
 
 export function randomHandle() {
