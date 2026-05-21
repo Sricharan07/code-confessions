@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { X, User, UserPlus } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 type AuthModalProps = {
   isOpen: boolean;
@@ -35,13 +36,31 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
 
   if (!isOpen) return null;
 
-  const handleGuestLogin = () => {
+  const handleGuestLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      onLogin({ username: generateRandomUsername(), isGuest: true });
+    setError("");
+    try {
+      const generatedUsername = generateRandomUsername();
+      
+      // 1. Sign up anonymously via Supabase
+      const { data, error } = await supabase.auth.signInAnonymously({
+        options: {
+          data: {
+            username: generatedUsername,
+            is_guest: true
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      onLogin({ username: generatedUsername, isGuest: true, id: data.user?.id });
       onClose();
-    }, 500);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleCustomSubmit = async (e: React.FormEvent) => {
@@ -64,12 +83,46 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
     setLoading(true);
     setError("");
     
-    // Simulate API call for login/signup
-    setTimeout(() => {
-      setLoading(false);
-      onLogin({ username, isGuest: false });
+    try {
+      // Supabase natively requires emails, so we fake one under the hood using the username
+      const fakeEmail = `${username.toLowerCase().replace(/[^a-z0-9]/g, '')}@vibefail.local`;
+
+      // 1. First, attempt to sign in (assuming account exists)
+      const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+        email: fakeEmail,
+        password: password,
+      });
+
+      if (signInError) {
+        // 2. If sign in fails because user doesn't exist, try to sign them up!
+        if (signInError.message.includes("Invalid login credentials")) {
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email: fakeEmail,
+            password: password,
+            options: {
+              data: {
+                username: username,
+                is_guest: false
+              }
+            }
+          });
+
+          if (signUpError) throw signUpError;
+          onLogin({ username, isGuest: false, id: signUpData.user?.id });
+        } else {
+          throw signInError; // Some other error occurred
+        }
+      } else {
+        // Sign in successful
+        onLogin({ username, isGuest: false, id: signInData.user?.id });
+      }
+      
       onClose();
-    }, 800);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

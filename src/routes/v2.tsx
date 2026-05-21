@@ -11,7 +11,7 @@ export const Route = createFileRoute("/v2")({
 
 function V2Layout() {
   return (
-    <div className="h-full bg-paper text-ink selection:bg-volt font-sans flex flex-col md:flex-row justify-center">
+    <div className="h-full bg-paper text-ink selection:bg-volt font-sans flex flex-col md:flex-row">
       {/* Left Sidebar - Desktop */}
       <aside className="w-full md:w-[275px] h-full md:flex flex-col bg-paper z-20">
         <SidebarV2 />
