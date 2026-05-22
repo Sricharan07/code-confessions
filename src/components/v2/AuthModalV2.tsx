@@ -42,8 +42,13 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
     try {
       const generatedUsername = generateRandomUsername();
       
-      // 1. Sign up anonymously via Supabase
-      const { data, error } = await supabase.auth.signInAnonymously({
+      // Sign up with fake email to bypass disabled anonymous providers
+      const fakeEmail = `guest_${generatedUsername.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Math.floor(Math.random() * 10000)}@vibefail.local`;
+      const fakePassword = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+
+      const { data, error } = await supabase.auth.signUp({
+        email: fakeEmail,
+        password: fakePassword,
         options: {
           data: {
             username: generatedUsername,

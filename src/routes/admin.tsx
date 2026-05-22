@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { deletePost, toggleHidden, useStore, timeAgo } from "@/lib/store";
 import { useState } from "react";
 
@@ -8,8 +8,28 @@ export const Route = createFileRoute("/admin")({
 });
 
 function Admin() {
-  const { posts, comments } = useStore();
+  const { posts, comments, user } = useStore();
   const [confirm, setConfirm] = useState<string | null>(null);
+
+  if (!user) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-20 text-center">
+        <p className="display text-3xl mb-3">Authenticating...</p>
+        <p className="mono text-sm text-muted-foreground">Checking credentials at the door.</p>
+      </main>
+    );
+  }
+
+  const isMod = user.role === "moderator" || user.username === "admin";
+  if (!isMod) {
+    return (
+      <main className="mx-auto max-w-2xl px-6 py-20 text-center">
+        <p className="display text-5xl mb-3 text-hot">403 / Access Denied</p>
+        <p className="mono text-sm mb-6">This desk is restricted to moderators only. Your credentials do not grant access to these tools.</p>
+        <Link to="/" className="brutal-btn mt-4">Return to safety</Link>
+      </main>
+    );
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 pb-20">

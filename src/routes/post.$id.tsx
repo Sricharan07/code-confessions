@@ -1,6 +1,6 @@
-import { createFileRoute, Link, notFound } from "@tanstack/react-router";
+import { createFileRoute, Link, notFound, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { addComment, setStatus, timeAgo, useStore } from "@/lib/store";
+import { addComment, deletePost, setStatus, timeAgo, useStore } from "@/lib/store";
 import { ReactionBar } from "@/components/ReactionBar";
 import { ShareCard } from "@/components/ShareCard";
 
@@ -16,15 +16,19 @@ export const Route = createFileRoute("/post/$id")({
 
 function PostPage() {
   const { id } = Route.useParams();
-  const { posts, comments } = useStore();
+  const navigate = useNavigate();
+  const { posts, comments, user } = useStore();
   const post = posts.find((p) => p.id === id);
   if (!post) throw notFound();
   const thread = comments.filter((c) => c.postId === id).sort((a, b) => a.createdAt - b.createdAt);
   const [draft, setDraft] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const isAuthorOrMod = user && (post.authorSessionId === user.id || user.role === "moderator");
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (draft.trim().length < 2) return;
+    if (draft.trim().length === 0) return;
     addComment(post.id, draft.trim().slice(0, 500));
     setDraft("");
   };
@@ -52,13 +56,56 @@ function PostPage() {
 
         <div className="border-2 border-ink p-4 mb-8 flex items-center justify-between gap-3 flex-wrap">
           <p className="mono text-xs uppercase font-bold">Did you fix it?</p>
-          <div className="flex gap-2">
-            <button onClick={() => setStatus(post.id, "broken")}
-              className={`brutal-btn-ghost text-xs ${post.status === "broken" ? "bg-hot text-paper" : ""}`}>★ Still broken</button>
-            <button onClick={() => setStatus(post.id, "solved")}
-              className={`brutal-btn-ghost text-xs ${post.status === "solved" ? "bg-volt" : ""}`}>✓ Solved</button>
-          </div>
+          {isAuthorOrMod ? (
+            <div className="flex gap-2">
+              <button onClick={() => setStatus(post.id, "broken")}
+                className={`brutal-btn-ghost text-xs ${post.status === "broken" ? "bg-hot text-paper" : ""}`}>★ Still broken</button>
+              <button onClick={() => setStatus(post.id, "solved")}
+                className={`brutal-btn-ghost text-xs ${post.status === "solved" ? "bg-volt" : ""}`}>✓ Solved</button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className={`brutal-tag text-xs ${post.status === "broken" ? "tag-broken" : "tag-solved"}`}>
+                {post.status === "broken" ? "★ Still Broken" : "✓ Solved"}
+              </span>
+              <span className="mono text-[10px] text-muted-foreground">(only author can change)</span>
+            </div>
+          )}
         </div>
+
+        {isAuthorOrMod && (
+          <div className="border-2 border-hot p-4 mb-8 flex items-center justify-between gap-3 flex-wrap bg-hot/5">
+            <p className="mono text-xs uppercase font-bold text-hot font-bold">Danger zone</p>
+            <div className="flex gap-2">
+              {confirmDelete ? (
+                <>
+                  <button
+                    onClick={async () => {
+                      await deletePost(post.id);
+                      navigate({ to: "/" });
+                    }}
+                    className="brutal-btn text-xs bg-hot text-paper"
+                  >
+                    Confirm delete
+                  </button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="brutal-btn-ghost text-xs"
+                  >
+                    Cancel
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  className="brutal-btn-ghost text-xs text-hot hover:bg-hot hover:text-paper"
+                >
+                  Delete Post
+                </button>
+              )}
+            </div>
+          </div>
+        )}
 
         <section>
           <h2 className="display text-2xl mb-4">The peanut gallery <span className="mono text-sm text-muted-foreground">({thread.length})</span></h2>

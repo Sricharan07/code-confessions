@@ -75,26 +75,30 @@ function Submit() {
     try {
       if (aiDefense.trim() || aiDefenseImage || crimeSceneImage) {
         setLoadingStatus("GENERATING THE MEME...");
-        // SSR Safe dynamic import of html2canvas
-        const html2canvas = (await import("html2canvas")).default;
-        
-        // Wait a tiny frame for DOM to update and render components fully
-        await new Promise((resolve) => setTimeout(resolve, 150));
+        try {
+          // SSR Safe dynamic import of html2canvas
+          const html2canvas = (await import("html2canvas")).default;
+          
+          // Wait a tiny frame for DOM to update and render components fully
+          await new Promise((resolve) => setTimeout(resolve, 150));
 
-        if (refTwitter.current) {
-          const canvasTwitter = await html2canvas(refTwitter.current, {
-            useCORS: true,
-            scale: 2,
-          });
-          twitterMemeUrl = canvasTwitter.toDataURL("image/png");
-        }
+          if (refTwitter.current) {
+            const canvasTwitter = await html2canvas(refTwitter.current, {
+              useCORS: true,
+              scale: 2,
+            });
+            twitterMemeUrl = canvasTwitter.toDataURL("image/png");
+          }
 
-        if (refInsta.current) {
-          const canvasInsta = await html2canvas(refInsta.current, {
-            useCORS: true,
-            scale: 2,
-          });
-          instaMemeUrl = canvasInsta.toDataURL("image/png");
+          if (refInsta.current) {
+            const canvasInsta = await html2canvas(refInsta.current, {
+              useCORS: true,
+              scale: 2,
+            });
+            instaMemeUrl = canvasInsta.toDataURL("image/png");
+          }
+        } catch (canvasErr) {
+          console.error("Failed to generate meme images via html2canvas:", canvasErr);
         }
       }
 
@@ -262,7 +266,7 @@ function Submit() {
           {/* Error notifications */}
           {errors.length > 0 && (
             <div className="bg-hot/10 text-hot p-4 border border-hot/25 rounded-xl">
-              <div className="font-sans text-xs font-bold uppercase mb-1">Verification Failed</div>
+              <div className="font-sans text-xs font-bold uppercase mb-1">Submission Error</div>
               <ul className="list-disc pl-4 font-sans text-[11px] text-hot/90 space-y-0.5">
                 {errors.map((err, idx) => (
                   <li key={idx}>{err}</li>

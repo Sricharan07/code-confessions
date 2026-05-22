@@ -96,14 +96,14 @@ export function useConfessForm() {
     const cs = crimeScene.trim();
     const aid = aiDefense.trim();
 
-    if (hl.length < 10) {
-      errs.push("ur headline is too short bestie");
+    if (hl.length === 0) {
+      errs.push("headline is required");
     } else if (hl.length > 140) {
       errs.push("chill on the headline — 140 chars max");
     }
 
-    if (cs.length < 20) {
-      errs.push("crime scene needs at least 20 chars. give us SOMETHING.");
+    if (cs.length === 0) {
+      errs.push("crime scene is required");
     } else if (cs.length > 500) {
       errs.push("crime scene too long. keep it under 500 characters.");
     }
