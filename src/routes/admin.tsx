@@ -1,7 +1,19 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useStore, timeAgo, deletePost, deleteComment, toggleHidden } from "@/lib/store";
+import { useStore, timeAgo } from "@/lib/store";
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import {
+  HttpError,
+  fetchAdminData,
+  grantModerator,
+  toggleUserRole as apiToggleUserRole,
+  dismissReport,
+  deleteReportedContent,
+  togglePostHidden,
+  deletePostAdmin,
+  adminLogin
+} from "@/lib/admin-api";
+
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 import { 
   Users, 
   Layers, 
@@ -68,7 +80,7 @@ function Admin() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [isAuthorized, setIsAuthorized] = useState(() => {
     if (typeof window !== "undefined") {
-      return sessionStorage.getItem("vibefail.admin_authorized") === "true";
+      return !!sessionStorage.getItem("vibefail.admin_token");
     }
     return false;
   });
@@ -77,36 +89,19 @@ function Admin() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      // 1. Fetch profiles
-      const { data: profilesData } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (profilesData) setDbProfiles(profilesData);
-
-      // 2. Fetch reports
-      const { data: reportsData } = await supabase
-        .from("reports")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (reportsData) setDbReports(reportsData);
-
-      // 3. Fetch all posts (including hidden ones for mod viewing)
-      const { data: postsData } = await supabase
-        .from("posts")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (postsData) setAllPosts(postsData);
-
-      // 4. Fetch all comments (including hidden ones)
-      const { data: commentsData } = await supabase
-        .from("comments")
-        .select("*")
-        .order("created_at", { ascending: false });
-      if (commentsData) setAllComments(commentsData);
-
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      const data = await fetchAdminData(token);
+      setDbProfiles(data.profiles || []);
+      setDbReports(data.reports || []);
+      setAllPosts(data.posts || []);
+      setAllComments(data.comments || []);
     } catch (err) {
       console.error("Error loading admin stats:", err);
+      if (err instanceof HttpError && err.status === 401) {
+        sessionStorage.removeItem("vibefail.admin_token");
+        setIsAuthorized(false);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -118,41 +113,34 @@ function Admin() {
     }
   }, [isAuthorized, user]);
 
-  // Make user a moderator in Supabase
+  // Make user a moderator via worker API
   const grantModeratorStatus = async () => {
     if (!user) return;
     setIsBypassing(true);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: "moderator" })
-        .eq("id", user.id);
-      
-      if (error) throw error;
-      
-      // Reload page to re-authenticate and sync context
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      await grantModerator(token, user.id);
       window.location.reload();
     } catch (err) {
       console.error("Failed to grant moderator status:", err);
-      alert("Failed to grant moderator status. Check your connection.");
+      alert("Failed to grant moderator status.");
       setIsBypassing(false);
     }
   };
 
-  // Toggle user role between moderator and user
+  // Toggle user role via worker API
   const toggleUserRole = async (profileId: string, currentRole: string) => {
-    const newRole = currentRole === "moderator" ? "user" : "moderator";
     setActionLoading(`role-${profileId}`);
     try {
-      const { error } = await supabase
-        .from("profiles")
-        .update({ role: newRole })
-        .eq("id", profileId);
-      
-      if (error) throw error;
-      setDbProfiles(prev => 
-        prev.map(p => p.id === profileId ? { ...p, role: newRole } : p)
-      );
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      const data = await apiToggleUserRole(token, profileId, currentRole);
+      if (data.ok) {
+        setDbProfiles(prev => 
+          prev.map(p => p.id === profileId ? { ...p, role: data.newRole } : p)
+        );
+      }
     } catch (err) {
       console.error("Failed to toggle role:", err);
       alert("Failed to update user role.");
@@ -161,16 +149,13 @@ function Admin() {
     }
   };
 
-  // Dismiss a report
+  // Dismiss a report via worker API
   const handleDismissReport = async (reportId: string) => {
     setActionLoading(`dismiss-${reportId}`);
     try {
-      const { error } = await supabase
-        .from("reports")
-        .delete()
-        .eq("id", reportId);
-      
-      if (error) throw error;
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      await dismissReport(token, reportId);
       setDbReports(prev => prev.filter(r => r.id !== reportId));
     } catch (err) {
       console.error("Failed to dismiss report:", err);
@@ -180,22 +165,14 @@ function Admin() {
     }
   };
 
-  // Delete reported content
+  // Delete reported content via worker API
   const handleDeleteContent = async (reportId: string, targetType: "post" | "comment", targetId: string) => {
     if (!window.confirm(`Are you sure you want to delete this ${targetType} and all reports associated with it?`)) return;
     setActionLoading(`delete-${reportId}`);
     try {
-      if (targetType === "post") {
-        await deletePost(targetId);
-        // Clean up reports for this post
-        await supabase.from("reports").delete().eq("target_type", "post").eq("target_id", targetId);
-      } else {
-        await deleteComment(targetId);
-        // Clean up reports for this comment
-        await supabase.from("reports").delete().eq("target_type", "comment").eq("target_id", targetId);
-      }
-      
-      // Update local state
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      await deleteReportedContent(token, targetId, targetType);
       setDbReports(prev => prev.filter(r => r.target_id !== targetId));
       if (targetType === "post") {
         setAllPosts(prev => prev.filter(p => p.id !== targetId));
@@ -214,10 +191,14 @@ function Admin() {
   const handleTogglePostHidden = async (postId: string) => {
     setActionLoading(`hide-${postId}`);
     try {
-      await toggleHidden(postId);
-      setAllPosts(prev => 
-        prev.map(p => p.id === postId ? { ...p, hidden: !p.hidden } : p)
-      );
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      const data = await togglePostHidden(token, postId);
+      if (data.ok) {
+        setAllPosts(prev => 
+          prev.map(p => p.id === postId ? { ...p, hidden: data.hidden } : p)
+        );
+      }
     } catch (err) {
       console.error("Failed to toggle post visibility:", err);
     } finally {
@@ -225,13 +206,14 @@ function Admin() {
     }
   };
 
-  // Hard delete a post from list
+  // Hard delete a post via worker API
   const handleHardDeletePost = async (postId: string) => {
     if (!window.confirm("Are you sure you want to permanently delete this confession?")) return;
     setActionLoading(`deletepost-${postId}`);
     try {
-      await deletePost(postId);
-      await supabase.from("reports").delete().eq("target_type", "post").eq("target_id", postId);
+      const token = sessionStorage.getItem("vibefail.admin_token");
+      if (!token) return;
+      await deletePostAdmin(token, postId);
       setAllPosts(prev => prev.filter(p => p.id !== postId));
       setDbReports(prev => prev.filter(r => !(r.target_type === "post" && r.target_id === postId)));
     } catch (err) {
@@ -246,33 +228,20 @@ function Admin() {
     setLoginError("");
     setIsLoggingIn(true);
 
-    const expectedUser = import.meta.env.VITE_ADMIN_USERNAME || "admin";
-    const expectedPass = import.meta.env.VITE_ADMIN_PASSWORD || "DodgeViperSRT@999";
-
-    if (adminUsernameInput !== expectedUser || adminPasswordInput !== expectedPass) {
-      setLoginError("Invalid username or password. Access denied.");
-      setIsLoggingIn(false);
-      return;
-    }
-
     try {
-      // Elevate actual user profile role to moderator in the database automatically
-      if (user && user.role !== "moderator") {
-        const { error } = await supabase
-          .from("profiles")
-          .update({ role: "moderator" })
-          .eq("id", user.id);
-        
-        if (error) {
-          console.error("Failed to automatically elevate session role:", error);
-        }
+      const data = await adminLogin(adminUsernameInput, adminPasswordInput);
+      if (!data.token) {
+        setLoginError(data.error || "Invalid username or password. Access denied.");
+        setIsLoggingIn(false);
+        return;
       }
 
-      sessionStorage.setItem("vibefail.admin_authorized", "true");
+      sessionStorage.setItem("vibefail.admin_token", data.token);
       setIsAuthorized(true);
     } catch (err) {
-      console.error("Authorization sync failed:", err);
-      setLoginError("Authorization failed. DB synchronization error.");
+      console.error("Authorization failed:", err);
+      const msg = err instanceof Error ? err.message : "Authorization failed. Could not reach the API.";
+      setLoginError(msg);
     } finally {
       setIsLoggingIn(false);
     }

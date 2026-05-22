@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { apiCall, getToken, ensureGuestSession } from "@/lib/store";
 
-const API_URL = import.meta.env.VITE_API_URL || "";
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export function MigrationBanner() {
   const [visible, setVisible] = useState(false);
@@ -56,10 +56,11 @@ export function MigrationBanner() {
           tool = "other";
         }
 
-        const { data: { session } } = await supabase.auth.getSession();
+        await ensureGuestSession();
+        const token = getToken();
         const headers: Record<string, string> = { "Content-Type": "application/json" };
-        if (session?.access_token) {
-          headers["Authorization"] = `Bearer ${session.access_token}`;
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
         }
         const res = await fetch(`${API_URL}/api/posts`, {
           method: "POST",
