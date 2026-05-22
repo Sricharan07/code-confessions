@@ -7,9 +7,12 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useStore } from "@/lib/store";
 
 import appCss from "../styles.css?url";
 import { Header } from "@/components/Header";
+import { MigrationBanner } from "@/components/MigrationBanner";
 
 function NotFoundComponent() {
   return (
@@ -110,9 +113,63 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+  const { theme } = useStore();
+  const isV2 = router.state.location.pathname === '/' || router.state.location.pathname === '/submit';
+  const isAdmin = router.state.location.pathname === '/admin';
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = window.document.documentElement;
+    
+    const applyTheme = (currentTheme: string) => {
+      if (
+        currentTheme === "dark" || 
+        (currentTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+    };
+
+    applyTheme(theme);
+
+    if (theme === "system") {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const listener = (e: MediaQueryListEvent) => {
+        applyTheme(e.matches ? "dark" : "light");
+      };
+      media.addEventListener("change", listener);
+      return () => media.removeEventListener("change", listener);
+    }
+  }, [theme]);
+
+  if (isAdmin) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+      </QueryClientProvider>
+    );
+  }
+
+  if (isV2) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <div className="flex flex-col h-dvh overflow-hidden">
+          <MigrationBanner />
+          <Header />
+          <div className="flex-1 overflow-hidden">
+            <Outlet />
+          </div>
+        </div>
+      </QueryClientProvider>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
+      <MigrationBanner />
       <Header />
       <Outlet />
       <footer className="mt-24 border-t-2 border-ink py-8 mono text-xs text-center">
