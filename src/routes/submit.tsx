@@ -49,6 +49,9 @@ function Submit() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("");
   const [remixSeed, setRemixSeed] = useState(0);
+  const recaptchaRef = useRef<HTMLDivElement | null>(null);
+  const recaptchaId = useRef<any>(null);
+
 
   const [successData, setSuccessData] = useState<{
     postId: string;
@@ -75,6 +78,54 @@ function Submit() {
     };
   }, []);
 
+  // Load Google reCAPTCHA Script Dynamically
+  useEffect(() => {
+    if (typeof window !== "undefined" && !document.getElementById("google-recaptcha-script")) {
+      const script = document.createElement("script");
+      script.id = "google-recaptcha-script";
+      script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
+      script.async = true;
+      script.defer = true;
+      document.body.appendChild(script);
+    }
+  }, []);
+
+  // Render Google reCAPTCHA Invisible Widget
+  useEffect(() => {
+    if (typeof window !== "undefined" && !successData) {
+      const interval = setInterval(() => {
+        if ((window as any).grecaptcha && recaptchaRef.current) {
+          clearInterval(interval);
+          try {
+            if (recaptchaRef.current.innerHTML === "") {
+              recaptchaId.current = (window as any).grecaptcha.render(recaptchaRef.current, {
+                sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI",
+                size: "invisible",
+                callback: (token: string) => {
+                  handleActualSubmit(token);
+                },
+                "expired-callback": () => {
+                  if ((window as any).grecaptcha && recaptchaId.current !== null) {
+                    (window as any).grecaptcha.reset(recaptchaId.current);
+                  }
+                },
+                "error-callback": () => {
+                  if ((window as any).grecaptcha && recaptchaId.current !== null) {
+                    (window as any).grecaptcha.reset(recaptchaId.current);
+                  }
+                }
+              });
+            }
+          } catch (err) {
+            console.error("reCAPTCHA rendering exception:", err);
+          }
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [successData]);
+
+
   const navItems = [
     { label: "Home", icon: Home, to: "/", search: {} },
     { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
@@ -93,16 +144,9 @@ function Submit() {
     }
   };
 
-  const handleSubmit = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
-    if (isSubmitting) return;
-
-    if (!validate()) {
-      return;
-    }
-
+  const handleActualSubmit = async (token: string) => {
     setIsSubmitting(true);
-    setLoadingStatus("POSTING UR L...");
+    setLoadingStatus("POSTING UR FAIL...");
 
     let twitterMemeUrl = "";
     let instaMemeUrl = "";
@@ -147,6 +191,7 @@ function Submit() {
         aiDefenseImage: aiDefenseImage || undefined,
         language: "Other",
         author: activeHandle,
+        recaptchaToken: token,
       });
 
       clearDraft();
@@ -160,12 +205,39 @@ function Submit() {
         instaMemeUrl,
         author: post.author,
       });
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setErrors(["Failed to submit the confession. Please try again."]);
+      const errMsg = err.message || "Failed to submit the confession. Please try again.";
+      setErrors([errMsg]);
+      if (typeof window !== "undefined" && (window as any).grecaptcha && recaptchaId.current !== null) {
+        (window as any).grecaptcha.reset(recaptchaId.current);
+      }
     } finally {
       setIsSubmitting(false);
       setLoadingStatus("");
+    }
+  };
+
+  const handleSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isSubmitting) return;
+
+    if (!validate()) {
+      return;
+    }
+
+    if (typeof window !== "undefined" && (window as any).grecaptcha && recaptchaId.current !== null) {
+      try {
+        setIsSubmitting(true);
+        setLoadingStatus("LAUNCHING CAPTCHA...");
+        (window as any).grecaptcha.execute(recaptchaId.current);
+      } catch (err) {
+        console.error("reCAPTCHA execution error:", err);
+        setIsSubmitting(false);
+        setErrors(["CAPTCHA failed to launch. Please reload and try again."]);
+      }
+    } else {
+      setErrors(["Security gate is still initializing. Please wait a moment."]);
     }
   };
 
@@ -271,7 +343,7 @@ function Submit() {
     }    return (
       <div className="mx-auto w-full max-w-2xl px-1 pt-4 pb-20 space-y-8">
         <div className="text-center space-y-2">
-          <span className="inline-block mb-2.5 font-sans text-[10px] uppercase bg-hot/10 px-2.5 py-0.5 border border-hot/20 text-hot font-bold rounded-full">
+          <span className="inline-block mb-2.5 font-sans text-[10px] uppercase bg-hot text-white px-2.5 py-0.5 font-bold rounded-full select-none shadow-sm tracking-wider">
             Step into the booth
           </span>
           <h1 className="font-sans font-black text-3xl sm:text-4xl text-ink dark:text-zinc-100 uppercase tracking-tight">
@@ -345,6 +417,9 @@ function Submit() {
             />
           </div>
 
+          {/* Programmatic Invisible Security Gate */}
+          <div ref={recaptchaRef} className="hidden" />
+
           {/* Action Row */}
           <div className="border-t border-ink/10 dark:border-zinc-800 pt-5 flex flex-col sm:flex-row gap-3 items-center justify-between">
             <div className="flex items-center gap-2">
@@ -365,7 +440,7 @@ function Submit() {
                 }}
                 className="font-sans text-xs font-bold py-2 px-4 border border-ink/20 dark:border-zinc-700 text-ink/80 dark:text-zinc-300 rounded-full hover:bg-ink/5 transition-all text-center flex items-center justify-center cursor-pointer"
               >
-                ✕ RESET
+                RESET
               </button>
               
               <button
@@ -373,7 +448,7 @@ function Submit() {
                 disabled={isSubmitting}
                 className="font-sans text-xs font-bold py-2 px-5 bg-hot hover:bg-hot/90 text-white rounded-full transition-all text-center flex items-center justify-center gap-1 disabled:opacity-50 cursor-pointer shadow-sm border border-transparent"
               >
-                {isSubmitting ? "POSTING..." : "CONFESS →"}
+                {isSubmitting ? "POSTING..." : "CONFESS"}
               </button>
             </div>
           </div>
@@ -538,7 +613,7 @@ function Submit() {
         </aside>
 
         {/* Form Container */}
-        <main className="flex-1 w-full max-w-[1130px] overflow-y-auto p-4 sm:p-8 pb-24 md:pb-8 bg-paper">
+        <main className="flex-1 w-full max-w-[1130px] overflow-hidden p-4 sm:p-8 pb-24 md:pb-8 bg-paper">
           {renderContent()}
         </main>
       </div>

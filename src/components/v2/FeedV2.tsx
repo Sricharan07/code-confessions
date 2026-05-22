@@ -271,10 +271,6 @@ export function FeedV2() {
                             <span className="font-extrabold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors flex items-center gap-0.5 leading-snug">
                               {acc.name}
                             </span>
-                            <span className="text-hot fill-current shrink-0">
-                              {/* Verification Checkmark */}
-                              <svg viewBox="0 0 24 24" className="w-4 h-4 text-hot fill-current"><g><path d="M22.5 12.5c0-1.58-.875-2.95-2.148-3.6.154-.435.238-.905.238-1.4 0-2.21-1.71-3.99-3.818-3.99-.48 0-.941.1-1.348.27C14.825 2.515 13.512 1.5 12 1.5s-2.825 1.015-3.422 2.28c-.407-.17-.868-.27-1.348-.27-2.108 0-3.818 1.78-3.818 3.99 0 .495.084.965.238 1.4-1.273.65-2.148 2.02-2.148 3.6 0 1.58.875 2.95 2.148 3.6-.154.435-.238.905-.238 1.4 0 2.21 1.71 3.99 3.818 3.99.48 0 .941-.1 1.348-.27C9.175 21.485 10.488 22.5 12 22.5s2.825-1.015 3.422-2.28c.407.17.868.27 1.348.27 2.108 0 3.818-1.78 3.818-3.99 0-.495-.084-.965-.238-1.4 1.273-.65 2.148-2.02 2.148-3.6zm-12.72 3.39l-3.21-3.21 1.41-1.42 1.8 1.8 4.8-4.8 1.42 1.42-6.22 6.21z"></path></g></svg>
-                            </span>
                           </div>
                           <span className="text-[13px] text-muted-foreground block -mt-0.5 leading-tight">{acc.handle}</span>
                           <p className="text-[13px] text-ink/80 dark:text-zinc-300 mt-1 leading-normal font-normal">{acc.bio}</p>
@@ -332,7 +328,7 @@ export function FeedV2() {
                 <div key={act.id} className="p-5 flex items-start gap-4 hover:bg-zinc-50/50 dark:hover:bg-zinc-900/10 transition-colors">
                   <div className={`p-2.5 rounded-full shrink-0 ${
                     act.type === "reaction" ? "bg-amber-50 dark:bg-amber-950/20 text-amber-500" :
-                    act.type === "trending" ? "bg-indigo-50 dark:bg-indigo-950/20 text-indigo-500" :
+                    act.type === "trending" ? "bg-orange-50 dark:bg-orange-950/20 text-orange-500" :
                     act.type === "status" ? "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400" :
                     "bg-rose-50 dark:bg-rose-950/20 text-rose-500"
                   }`}>
@@ -635,11 +631,11 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
     } else if (t === "chatgpt") {
       return "bg-emerald-100/40 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 border-emerald-200/40";
     } else if (t === "cursor") {
-      return "bg-indigo-100/40 text-indigo-800 dark:bg-indigo-950/20 dark:text-indigo-300 border-indigo-200/40";
+      return "bg-orange-100/40 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300 border-orange-200/40";
     } else if (t === "gemini") {
       return "bg-blue-100/40 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300 border-blue-200/40";
     } else if (t === "copilot") {
-      return "bg-pink-100/40 text-pink-800 dark:bg-pink-950/20 dark:text-pink-300 border-pink-200/40";
+      return "bg-orange-100/40 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300 border-orange-200/40";
     } else if (t === "v0") {
       return "bg-zinc-100/50 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-800";
     }

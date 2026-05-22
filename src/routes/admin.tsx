@@ -281,8 +281,8 @@ function Admin() {
   if (!user) {
     return (
       <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center select-none font-sans">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-950/20 via-zinc-950 to-zinc-950 -z-10" />
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mb-4" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-950/20 via-zinc-950 to-zinc-950 -z-10" />
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mb-4" />
         <p className="text-xl font-bold text-zinc-100 tracking-tight">Authenticating Mod Desk...</p>
         <p className="text-[12px] text-zinc-500 mt-2 font-mono">Verifying local session with Supabase auth</p>
       </main>
@@ -292,13 +292,13 @@ function Admin() {
   if (!isAuthorized) {
     return (
       <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 font-sans relative overflow-hidden select-none">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-indigo-950/20 via-zinc-950 to-zinc-950 -z-10" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-orange-950/20 via-zinc-950 to-zinc-950 -z-10" />
         
         {/* Glow Effects */}
-        <div className="absolute w-[300px] h-[300px] bg-indigo-500/10 blur-[100px] -top-10 rounded-full animate-pulse" />
+        <div className="absolute w-[300px] h-[300px] bg-orange-500/10 blur-[100px] -top-10 rounded-full animate-pulse" />
         
-        <div className="max-w-md w-full bg-zinc-900/50 border-2 border-indigo-500/20 rounded-3xl p-8 backdrop-blur-md shadow-2xl relative">
-          <div className="w-16 h-16 rounded-full bg-indigo-500/10 border border-indigo-500/30 flex items-center justify-center mx-auto mb-6 text-indigo-400">
+        <div className="max-w-md w-full bg-zinc-900/50 border-2 border-orange-500/20 rounded-3xl p-8 backdrop-blur-md shadow-2xl relative">
+          <div className="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mx-auto mb-6 text-orange-400">
             <Shield className="w-8 h-8" />
           </div>
           
@@ -316,7 +316,7 @@ function Admin() {
                 value={adminUsernameInput}
                 onChange={(e) => setAdminUsernameInput(e.target.value)}
                 placeholder="Enter username..."
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 placeholder-zinc-700 transition-colors"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-orange-500 placeholder-zinc-700 transition-colors"
               />
             </div>
 
@@ -328,7 +328,7 @@ function Admin() {
                 value={adminPasswordInput}
                 onChange={(e) => setAdminPasswordInput(e.target.value)}
                 placeholder="Enter password..."
-                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 placeholder-zinc-700 transition-colors"
+                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl px-4 py-2.5 text-xs text-zinc-200 focus:outline-none focus:border-orange-500 placeholder-zinc-700 transition-colors"
               />
             </div>
 
@@ -342,7 +342,7 @@ function Admin() {
             <button
               type="submit"
               disabled={isLoggingIn}
-              className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 disabled:opacity-50 text-white font-extrabold py-3 px-6 rounded-full text-xs shadow-lg uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-gradient-to-r from-orange-600 to-orange-500 hover:from-orange-500 hover:to-orange-400 disabled:opacity-50 text-white font-extrabold py-3 px-6 rounded-full text-xs shadow-lg uppercase tracking-wider transition-all cursor-pointer flex items-center justify-center gap-2 mt-2"
             >
               {isLoggingIn ? (
                 <>
@@ -419,7 +419,7 @@ function Admin() {
           </Link>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-[9px] font-extrabold uppercase bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-500/20 flex items-center gap-1">
+              <span className="text-[9px] font-extrabold uppercase bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-full border border-orange-500/20 flex items-center gap-1">
                 <Shield className="w-2.5 h-2.5" />
                 Moderation Command
               </span>
@@ -446,15 +446,15 @@ function Admin() {
       <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 space-y-6">
         
         {/* Glow Backdrop */}
-        <div className="absolute w-[500px] h-[300px] bg-indigo-500/5 blur-[150px] top-40 left-10 rounded-full -z-10" />
-        <div className="absolute w-[400px] h-[300px] bg-violet-500/5 blur-[120px] bottom-10 right-10 rounded-full -z-10" />
+        <div className="absolute w-[500px] h-[300px] bg-orange-500/5 blur-[150px] top-40 left-10 rounded-full -z-10" />
+        <div className="absolute w-[400px] h-[300px] bg-amber-500/5 blur-[120px] bottom-10 right-10 rounded-full -z-10" />
 
         {/* 1. Dashboard Metrics Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           
           {/* Card 1: Users */}
           <div className="bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4 flex items-center gap-4 hover:border-zinc-800 transition-colors shadow-sm">
-            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-xl shrink-0">
+            <div className="p-3 bg-orange-500/10 border border-orange-500/20 text-orange-400 rounded-xl shrink-0">
               <Users className="w-6 h-6" />
             </div>
             <div>
@@ -465,7 +465,7 @@ function Admin() {
 
           {/* Card 2: Confessions */}
           <div className="bg-zinc-900/40 border border-zinc-850 rounded-2xl p-4 flex items-center gap-4 hover:border-zinc-800 transition-colors shadow-sm">
-            <div className="p-3 bg-violet-500/10 border border-violet-500/20 text-violet-400 rounded-xl shrink-0">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/20 text-amber-400 rounded-xl shrink-0">
               <Layers className="w-6 h-6" />
             </div>
             <div>
@@ -526,14 +526,14 @@ function Admin() {
                     active 
                       ? tab.id === "reports" && dbReports.length > 0 
                         ? "text-rose-450 font-black" 
-                        : "text-indigo-400 font-black" 
+                        : "text-orange-400 font-black" 
                       : "text-zinc-500 font-semibold"
                   }`}
                 >
                   {tab.label}
                   {active && (
                     <div className={`absolute bottom-0 left-0 right-0 h-0.5 ${
-                      tab.id === "reports" && dbReports.length > 0 ? "bg-rose-500" : "bg-indigo-500"
+                      tab.id === "reports" && dbReports.length > 0 ? "bg-rose-500" : "bg-orange-500"
                     }`} />
                   )}
                 </button>
@@ -547,7 +547,7 @@ function Admin() {
             {/* Loading Overlay */}
             {isLoading && (
               <div className="flex flex-col items-center justify-center py-20 text-zinc-500">
-                <RefreshCw className="w-8 h-8 animate-spin text-indigo-500 mb-2" />
+                <RefreshCw className="w-8 h-8 animate-spin text-orange-500 mb-2" />
                 <p className="text-xs font-semibold uppercase tracking-wider font-mono">Syncing database state...</p>
               </div>
             )}
@@ -579,7 +579,7 @@ function Admin() {
                               <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md ${
                                   report.target_type === "post" 
-                                    ? "bg-violet-500/10 border border-violet-500/20 text-violet-400" 
+                                    ? "bg-orange-500/10 border border-orange-500/20 text-orange-400" 
                                     : "bg-blue-500/10 border border-blue-500/20 text-blue-400"
                                 }`}>
                                   {report.target_type}
@@ -673,7 +673,7 @@ function Admin() {
                           placeholder="Search username..."
                           value={searchUser}
                           onChange={(e) => setSearchUser(e.target.value)}
-                          className="w-full pl-9 pr-4 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 placeholder-zinc-550 transition-colors"
+                          className="w-full pl-9 pr-4 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-orange-500 placeholder-zinc-550 transition-colors"
                         />
                       </div>
                     </div>
@@ -708,7 +708,7 @@ function Admin() {
                                   <span className={`text-[10px] px-2 py-0.5 rounded-full border font-bold ${
                                     profile.is_guest 
                                       ? "bg-zinc-900 text-zinc-400 border-zinc-800/80" 
-                                      : "bg-indigo-500/10 text-indigo-400 border-indigo-500/20"
+                                      : "bg-orange-500/10 text-orange-400 border-orange-500/20"
                                   }`}>
                                     {profile.is_guest ? "Guest Session" : "Claimed Account"}
                                   </span>
@@ -716,10 +716,10 @@ function Admin() {
                                 <td className="p-3.5">
                                   <span className={`text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${
                                     profile.role === "moderator" 
-                                      ? "text-indigo-400" 
+                                      ? "text-orange-400" 
                                       : "text-zinc-400"
                                   }`}>
-                                    <Shield className={`w-3.5 h-3.5 ${profile.role === "moderator" ? "text-indigo-400" : "text-zinc-650"}`} />
+                                    <Shield className={`w-3.5 h-3.5 ${profile.role === "moderator" ? "text-orange-400" : "text-zinc-650"}`} />
                                     {profile.role || "user"}
                                   </span>
                                 </td>
@@ -742,7 +742,7 @@ function Admin() {
                                     className={`px-3 py-1.5 rounded-xl border text-[10px] font-bold uppercase tracking-wider transition-colors cursor-pointer disabled:opacity-30 ${
                                       profile.role === "moderator"
                                         ? "bg-rose-500/10 border-rose-500/20 text-rose-450 hover:bg-rose-500 hover:text-white"
-                                        : "bg-indigo-500/10 border-indigo-500/20 text-indigo-400 hover:bg-indigo-500 hover:text-white"
+                                        : "bg-orange-500/10 border-orange-500/20 text-orange-400 hover:bg-orange-500 hover:text-white"
                                     }`}
                                   >
                                     {isPending ? "..." : profile.role === "moderator" ? "Demote User" : "Make Admin"}
@@ -779,7 +779,7 @@ function Admin() {
                           placeholder="Search keyword or author..."
                           value={searchPost}
                           onChange={(e) => setSearchPost(e.target.value)}
-                          className="w-full pl-9 pr-4 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-indigo-500 placeholder-zinc-550 transition-colors"
+                          className="w-full pl-9 pr-4 py-1.5 bg-zinc-900 border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-orange-500 placeholder-zinc-550 transition-colors"
                         />
                       </div>
                     </div>
@@ -812,7 +812,7 @@ function Admin() {
                                 <td className="p-3.5 max-w-xs truncate text-zinc-200">
                                   {post.title}
                                 </td>
-                                <td className="p-3.5 uppercase text-indigo-400 font-extrabold">
+                                <td className="p-3.5 uppercase text-orange-400 font-extrabold">
                                   {post.tool}
                                 </td>
                                 <td className="p-3.5 capitalize">

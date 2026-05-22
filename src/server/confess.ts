@@ -3,6 +3,8 @@ import { getRequest } from "@tanstack/react-start/server";
 import { supabase } from "@/lib/supabase";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
+import { validateUrlsAndXss, moderateContent } from "@/lib/moderation";
+
 
 const PostInputSchema = z.object({
   title: z.string(),
@@ -15,7 +17,9 @@ const PostInputSchema = z.object({
   memeUrl: z.string().optional(),
   crimeSceneImage: z.string().optional(),
   aiDefenseImage: z.string().optional(),
+  recaptchaToken: z.string().optional(),
 });
+
 
 const ReactionInputSchema = z.object({
   postId: z.string(),
@@ -122,8 +126,15 @@ export const createPostFn = createServerFn({ method: "POST" })
       }
       const sessionId = session.user.id;
 
-      // server-side validation
-      const { title, body, tool, aiDefense, crimeSceneImage, aiDefenseImage } = input;
+      // server-side validation & XSS protection
+      const { title, body, tool, aiDefense, crimeSceneImage, aiDefenseImage, recaptchaToken } = input;
+      
+      // Check for raw HTML (XSS prevention) and limit URLs in body
+      validateUrlsAndXss(body, title);
+      if (aiDefense) {
+        validateUrlsAndXss(aiDefense);
+      }
+
       if (!title || title.trim().length === 0 || title.length > 140) {
         throw new Error("ur input is cooked. fix it.");
       }
@@ -141,16 +152,60 @@ export const createPostFn = createServerFn({ method: "POST" })
       if (/^(.)\1+$/.test(trimmedBody)) {
         throw new Error("ur input is cooked. fix it.");
       }
-      const httpCount = (body.match(/http/gi) || []).length;
-      if (httpCount > 3) {
-        throw new Error("ur input is cooked. fix it.");
+
+      // CAPTCHA verification (Google reCAPTCHA v2)
+      const recaptchaSecret = process.env.RECAPTCHA_SECRET_KEY || "6LeIxAcTAAAAAGG-vFI1TnP4WfUx96oYGCJV-3q7";
+      if (recaptchaToken) {
+        try {
+          const verifyUrl = "https://www.google.com/recaptcha/api/siteverify";
+          const response = await fetch(verifyUrl, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: `secret=${encodeURIComponent(recaptchaSecret)}&response=${encodeURIComponent(recaptchaToken)}`,
+          });
+          const result = await response.json();
+          if (!result.success) {
+            throw new Error("CAPTCHA verification failed. Please try again.");
+          }
+        } catch (err: any) {
+          console.warn("reCAPTCHA validation exception:", err.message);
+          if (err.message?.includes("failed") || err.message?.includes("CAPTCHA")) {
+            throw err;
+          }
+        }
       }
 
-      // rate limit check
+      // Content Moderation (OpenAI Moderation API + Backup Local Word Filter)
+      await moderateContent(title, body);
+
+      // rate limit check (5 posts per hour)
       await checkRateLimit(sessionId, "post", 5);
 
       const anonHandle = "anon-" + sessionId.slice(0, 4);
       const id = crypto.randomUUID();
+
+      // Extract client IP address securely
+      let clientIp = "127.0.0.1";
+      try {
+        const req = getRequest();
+        clientIp = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "127.0.0.1";
+        if (clientIp.includes(",")) {
+          clientIp = clientIp.split(",")[0].trim();
+        }
+      } catch (err) {
+        console.error("Failed to extract client IP:", err);
+      }
+
+      // Write private audit log containing IP address
+      await supabase.from("audit_logs").insert({
+        session_id: sessionId,
+        action_type: "post",
+        target_id: id,
+        client_ip: clientIp,
+      });
+
 
       const { error } = await supabase.from("posts").insert({
         id,
@@ -212,8 +267,8 @@ export const toggleReactionFn = createServerFn({ method: "POST" })
       }
       const sessionId = session.user.id;
 
-      // rate limit check
-      await checkRateLimit(sessionId, "react", 150);
+      // rate limit check (100 reactions per hour)
+      await checkRateLimit(sessionId, "react", 100);
 
       const secretKey = getActiveSecretReaction().key;
       const allowedReactions = ["cooked", "relatable", "skill_issue", "cursed", secretKey];
@@ -400,16 +455,37 @@ export const createCommentFn = createServerFn({ method: "POST" })
       }
       const sessionId = session.user.id;
 
-      // rate limit check
-      await checkRateLimit(sessionId, "comment", 50);
+      // rate limit check (30 comments per hour)
+      await checkRateLimit(sessionId, "comment", 30);
 
-      // validation
+      // validation & XSS protection
+      validateUrlsAndXss(body);
       if (!body || body.length < 1 || body.length > 500 || body.trim().length === 0) {
         throw new Error("ur input is cooked. fix it.");
       }
 
       const anonHandle = "anon-" + sessionId.slice(0, 4);
       const commentId = crypto.randomUUID();
+
+      // Extract client IP address securely
+      let clientIp = "127.0.0.1";
+      try {
+        const req = getRequest();
+        clientIp = req.headers.get("cf-connecting-ip") || req.headers.get("x-forwarded-for") || "127.0.0.1";
+        if (clientIp.includes(",")) {
+          clientIp = clientIp.split(",")[0].trim();
+        }
+      } catch (err) {
+        console.error("Failed to extract client IP:", err);
+      }
+
+      // Write private audit log containing IP address
+      await supabase.from("audit_logs").insert({
+        session_id: sessionId,
+        action_type: "comment",
+        target_id: commentId,
+        client_ip: clientIp,
+      });
 
       const { error } = await supabase.from("comments").insert({
         id: commentId,

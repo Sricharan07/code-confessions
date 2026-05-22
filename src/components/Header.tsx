@@ -2,7 +2,9 @@ import { Link, useRouter } from "@tanstack/react-router";
 
 export function Header() {
   const router = useRouter();
-  const isV2 = router.state.location.pathname === '/' || router.state.location.pathname === '/submit';
+  const currentPath = router.state.location.pathname;
+  const isV2 = currentPath === '/' || currentPath === '/submit';
+  const isSubmitPage = currentPath === '/submit';
 
   return (
     <header className={isV2 ? "z-40 bg-paper" : "brutal-border border-x-0 border-t-0 bg-paper sticky top-0 z-40"}>
@@ -18,22 +20,24 @@ export function Header() {
           </nav>
         </div>
       )}
-      <div className={isV2 ? "overflow-hidden bg-ink text-paper py-2" : "marquee"}>
-        <div className={isV2 ? "flex gap-10 whitespace-nowrap animate-[scroll_40s_linear_infinite] font-sans text-[13px] font-bold uppercase tracking-wider" : "marquee-track"}>
-          {Array.from({ length: 4 }).map((_, i) => (
-            <span key={i} className="flex gap-10">
-              <span>POST THE WORST THING AI DID TO YOUR CODE</span>
-              <span>·</span>
-              <span>NO LOGINS · NO JUDGMENT · ONLY PAIN</span>
-              <span>·</span>
-              <span>YOU ARE NOT ALONE</span>
-              <span>·</span>
-              <span>SHIP IT &amp; CRY</span>
-              <span>·</span>
-            </span>
-          ))}
+      {!isSubmitPage && (
+        <div className={isV2 ? "overflow-hidden bg-ink text-paper py-2" : "marquee"}>
+          <div className={isV2 ? "flex gap-10 whitespace-nowrap animate-[scroll_40s_linear_infinite] font-sans text-[13px] font-bold uppercase tracking-wider" : "marquee-track"}>
+            {Array.from({ length: 4 }).map((_, i) => (
+              <span key={i} className="flex gap-10">
+                <span>POST THE WORST THING AI DID TO YOUR CODE</span>
+                <span>·</span>
+                <span>NO LOGINS · NO JUDGMENT · ONLY PAIN</span>
+                <span>·</span>
+                <span>YOU ARE NOT ALONE</span>
+                <span>·</span>
+                <span>SHIP IT &amp; CRY</span>
+                <span>·</span>
+              </span>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
     </header>
   );
 }

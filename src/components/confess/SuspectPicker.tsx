@@ -6,10 +6,10 @@ interface SuspectPickerProps {
 }
 
 const SUSPECTS: { key: AITool; label: string; class: string }[] = [
-  { key: "cursor", label: "Cursor", class: "bg-indigo-100/40 text-indigo-800 dark:bg-indigo-950/20 dark:text-indigo-300 border-indigo-200/40" },
+  { key: "cursor", label: "Cursor", class: "bg-orange-100/40 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300 border-orange-200/40" },
   { key: "chatgpt", label: "ChatGPT", class: "bg-emerald-100/40 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 border-emerald-200/40" },
   { key: "claude", label: "Claude", class: "bg-amber-100/40 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 border-amber-200/40" },
-  { key: "copilot", label: "Copilot", class: "bg-pink-100/40 text-pink-800 dark:bg-pink-950/20 dark:text-pink-300 border-pink-200/40" },
+  { key: "copilot", label: "Copilot", class: "bg-orange-100/40 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300 border-orange-200/40" },
   { key: "gemini", label: "Gemini", class: "bg-blue-100/40 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300 border-blue-200/40" },
   { key: "other", label: "Other", class: "bg-zinc-100/50 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-800" },
 ];

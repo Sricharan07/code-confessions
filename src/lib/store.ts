@@ -484,7 +484,7 @@ export function randomHandle() {
 }
 
 export function createPost(
-  input: Omit<Post, "id" | "createdAt" | "reactions" | "status" | "author" | "court"> & { author?: string }
+  input: Omit<Post, "id" | "createdAt" | "reactions" | "status" | "author" | "court"> & { author?: string, recaptchaToken?: string }
 ) {
   init();
   const id = safeUUID();
@@ -527,10 +527,12 @@ export function createPost(
           memeUrl: input.memeUrl,
           crimeSceneImage: input.crimeSceneImage,
           aiDefenseImage: input.aiDefenseImage,
+          recaptchaToken: input.recaptchaToken,
         }
       });
       if (res && "error" in res) {
         console.error("Failed to save post to database:", res.error);
+        throw new Error(res.error);
       } else if (res) {
         posts = posts.map((p) => p.id === id ? (res as Post) : p);
         persist();
