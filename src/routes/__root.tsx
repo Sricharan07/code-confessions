@@ -12,6 +12,7 @@ import { useStore } from "@/lib/store";
 
 import appCss from "../styles.css?url";
 import { Header } from "@/components/Header";
+import { MigrationBanner } from "@/components/MigrationBanner";
 
 function NotFoundComponent() {
   return (
@@ -147,6 +148,7 @@ function RootComponent() {
     return (
       <QueryClientProvider client={queryClient}>
         <div className="flex flex-col h-dvh overflow-hidden">
+          <MigrationBanner />
           <Header />
           <div className="flex-1 overflow-hidden">
             <Outlet />
@@ -158,6 +160,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <MigrationBanner />
       <Header />
       <Outlet />
       <footer className="mt-24 border-t-2 border-ink py-8 mono text-xs text-center">

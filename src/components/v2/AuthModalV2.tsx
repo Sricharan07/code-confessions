@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { X, User, Shield, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { getCuratedUsernameSuggestions } from "@/lib/auth-utils";
+import { getCuratedUsernameSuggestions, generateRandomUsername } from "@/lib/auth-utils";
 
 type AuthModalProps = {
   isOpen: boolean;
@@ -82,13 +82,36 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
 
   if (!isOpen) return null;
 
-  const handleGuestLogin = () => {
-    onLogin({ 
-      username: "Guest", 
-      isGuest: true, 
-      id: null 
-    });
-    onClose();
+  const handleGuestLogin = async () => {
+    setLoading(true);
+    setError("");
+    try {
+      const generatedUsername = generateRandomUsername();
+      
+      // Sign up with fake email to bypass disabled anonymous providers
+      const fakeEmail = `guest_${generatedUsername.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Math.floor(Math.random() * 10000)}@vibefail.local`;
+      const fakePassword = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
+
+      const { data, error } = await supabase.auth.signUp({
+        email: fakeEmail,
+        password: fakePassword,
+        options: {
+          data: {
+            username: generatedUsername,
+            is_guest: true
+          }
+        }
+      });
+      
+      if (error) throw error;
+      
+      onLogin({ username: generatedUsername, isGuest: true, id: data.user?.id });
+      onClose();
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
