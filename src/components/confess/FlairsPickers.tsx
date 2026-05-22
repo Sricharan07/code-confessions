@@ -41,11 +41,11 @@ export function VibePicker({ value, onChange }: VibePickerProps) {
   };
 
   return (
-    <div className="space-y-2">
-      <label className="font-sans text-xs font-semibold text-ink/75 block">
+    <div className="space-y-1.5">
+      <label className="font-sans text-xs font-semibold text-ink/70 dark:text-zinc-400 block">
         Vibe (Optional)
       </label>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {VIBES.map((v) => {
           const isSelected = value === v.key;
           return (
@@ -53,17 +53,14 @@ export function VibePicker({ value, onChange }: VibePickerProps) {
               key={v.key}
               type="button"
               onClick={() => toggle(v.key as Vibe)}
-              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all duration-150 scale-[1.0] hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${
+              className={`flex items-center gap-1.5 py-1 px-3 rounded-full border text-[11px] font-semibold transition-all duration-150 scale-[1.0] hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${
                 isSelected
-                  ? "bg-volt/10 border-ink text-ink font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                  : "bg-paper border-ink/15 text-ink hover:bg-ink/5 hover:border-ink/30"
+                  ? "bg-hot/10 dark:bg-hot/15 border-hot/45 dark:border-hot/50 text-hot font-bold shadow-sm"
+                  : "bg-paper dark:bg-zinc-950/40 border-ink/10 dark:border-zinc-800 text-ink/80 dark:text-zinc-300 hover:bg-ink/5 dark:hover:bg-zinc-900/60"
               }`}
             >
-              <span className="text-xl select-none leading-none mt-0.5">{v.emoji}</span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-bold text-ink uppercase tracking-tight leading-tight">{v.label}</span>
-                <span className="text-[9px] text-ink/50 leading-tight mt-0.5 truncate">{v.desc}</span>
-              </div>
+              <span className="text-sm select-none leading-none">{v.emoji}</span>
+              <span className="uppercase tracking-tight leading-none">{v.label}</span>
             </button>
           );
         })}
@@ -80,11 +77,11 @@ interface VerdictPickerProps {
 
 export function VerdictPicker({ value, onChange }: VerdictPickerProps) {
   return (
-    <div className="space-y-2">
-      <label className="font-sans text-xs font-semibold text-ink/75 block">
+    <div className="space-y-1.5">
+      <label className="font-sans text-xs font-semibold text-ink/70 dark:text-zinc-400 block">
         Verdict (Optional, defaults to Still Broken)
       </label>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {VERDICTS.map((vd) => {
           const isSelected = value === vd.key;
           return (
@@ -92,17 +89,14 @@ export function VerdictPicker({ value, onChange }: VerdictPickerProps) {
               key={vd.key}
               type="button"
               onClick={() => onChange(vd.key as Verdict)}
-              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all duration-150 scale-[1.0] hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${
+              className={`flex items-center gap-1.5 py-1 px-3 rounded-full border text-[11px] font-semibold transition-all duration-150 scale-[1.0] hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${
                 isSelected
-                  ? "bg-volt/10 border-ink text-ink font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                  : "bg-paper border-ink/15 text-ink hover:bg-ink/5 hover:border-ink/30"
+                  ? "bg-hot/10 dark:bg-hot/15 border-hot/45 dark:border-hot/50 text-hot font-bold shadow-sm"
+                  : "bg-paper dark:bg-zinc-950/40 border-ink/10 dark:border-zinc-800 text-ink/80 dark:text-zinc-300 hover:bg-ink/5 dark:hover:bg-zinc-900/60"
               }`}
             >
-              <span className="text-xl select-none leading-none mt-0.5">{vd.emoji}</span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-bold text-ink uppercase tracking-tight leading-tight">{vd.label}</span>
-                <span className="text-[9px] text-ink/50 leading-tight mt-0.5 truncate">{vd.desc}</span>
-              </div>
+              <span className="text-sm select-none leading-none">{vd.emoji}</span>
+              <span className="uppercase tracking-tight leading-none">{vd.label}</span>
             </button>
           );
         })}
@@ -127,11 +121,11 @@ export function PleaPicker({ value, onChange }: PleaPickerProps) {
   };
 
   return (
-    <div className="space-y-2">
-      <label className="font-sans text-xs font-semibold text-ink/75 block">
+    <div className="space-y-1.5">
+      <label className="font-sans text-xs font-semibold text-ink/70 dark:text-zinc-400 block">
         Your Plea (Optional)
       </label>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      <div className="flex flex-wrap gap-1.5">
         {PLEAS.map((p) => {
           const isSelected = value === p.key;
           return (
@@ -139,17 +133,14 @@ export function PleaPicker({ value, onChange }: PleaPickerProps) {
               key={p.key}
               type="button"
               onClick={() => toggle(p.key as Plea)}
-              className={`flex items-start gap-2.5 p-2.5 rounded-xl border text-left transition-all duration-150 scale-[1.0] hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${
+              className={`flex items-center gap-1.5 py-1 px-3 rounded-full border text-[11px] font-semibold transition-all duration-150 scale-[1.0] hover:scale-[1.01] active:scale-[0.98] cursor-pointer ${
                 isSelected
-                  ? "bg-volt/10 border-ink text-ink font-bold shadow-[2px_2px_0_0_rgba(0,0,0,1)]"
-                  : "bg-paper border-ink/15 text-ink hover:bg-ink/5 hover:border-ink/30"
+                  ? "bg-hot/10 dark:bg-hot/15 border-hot/45 dark:border-hot/50 text-hot font-bold shadow-sm"
+                  : "bg-paper dark:bg-zinc-950/40 border-ink/10 dark:border-zinc-800 text-ink/80 dark:text-zinc-300 hover:bg-ink/5 dark:hover:bg-zinc-900/60"
               }`}
             >
-              <span className="text-xl select-none leading-none mt-0.5">{p.emoji}</span>
-              <div className="flex flex-col min-w-0">
-                <span className="text-[11px] font-bold text-ink uppercase tracking-tight leading-tight">{p.label}</span>
-                <span className="text-[9px] text-ink/50 leading-tight mt-0.5 truncate">{p.desc}</span>
-              </div>
+              <span className="text-sm select-none leading-none">{p.emoji}</span>
+              <span className="uppercase tracking-tight leading-none">{p.label}</span>
             </button>
           );
         })}

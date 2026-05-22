@@ -115,7 +115,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const { theme } = useStore();
-  const isV2 = router.state.location.pathname === '/';
+  const isV2 = router.state.location.pathname === '/' || router.state.location.pathname === '/submit';
+  const isAdmin = router.state.location.pathname === '/admin';
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -143,6 +144,14 @@ function RootComponent() {
       return () => media.removeEventListener("change", listener);
     }
   }, [theme]);
+
+  if (isAdmin) {
+    return (
+      <QueryClientProvider client={queryClient}>
+        <Outlet />
+      </QueryClientProvider>
+    );
+  }
 
   if (isV2) {
     return (

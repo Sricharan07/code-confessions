@@ -9,7 +9,7 @@ export function SidebarV2() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const { user, theme } = useStore();
   const router = useRouter();
-  const search = useSearch({ from: "/" }) as any;
+  const search = useSearch({ strict: false }) as any;
   const activeTab = search.tab || "for-you";
 
   const navItems = [
@@ -69,19 +69,13 @@ export function SidebarV2() {
             })}
             
             <div className="w-full mt-4">
-              <button 
-                onClick={() => {
-                  if (!user || user.isGuest) {
-                    setAuthOpen(true);
-                  } else {
-                    router.navigate({ to: "/", search: { compose: "true" } as any });
-                  }
-                }}
-                className="flex items-center justify-center gap-2 w-[85%] py-2.5 bg-hot hover:bg-hot/90 transition-colors rounded-full font-bold text-[15px] text-paper shadow-sm"
+              <Link 
+                to="/submit"
+                className="flex items-center justify-center gap-2 w-[85%] py-2.5 bg-hot hover:bg-hot/90 transition-colors rounded-full font-bold text-[15px] text-paper shadow-sm cursor-pointer"
               >
                 <span className="hidden md:block">Confess</span>
                 <Plus className="w-5 h-5 stroke-[2.5px] md:hidden" />
-              </button>
+              </Link>
             </div>
           </nav>
         </div>

@@ -5,19 +5,19 @@ interface SuspectPickerProps {
   onChange: (val: AITool) => void;
 }
 
-const SUSPECTS: { key: AITool; label: string }[] = [
-  { key: "cursor", label: "CURSOR" },
-  { key: "chatgpt", label: "CHATGPT" },
-  { key: "claude", label: "CLAUDE" },
-  { key: "copilot", label: "COPILOT" },
-  { key: "gemini", label: "GEMINI" },
-  { key: "other", label: "OTHER" },
+const SUSPECTS: { key: AITool; label: string; class: string }[] = [
+  { key: "cursor", label: "Cursor", class: "bg-indigo-100/40 text-indigo-800 dark:bg-indigo-950/20 dark:text-indigo-300 border-indigo-200/40" },
+  { key: "chatgpt", label: "ChatGPT", class: "bg-emerald-100/40 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 border-emerald-200/40" },
+  { key: "claude", label: "Claude", class: "bg-amber-100/40 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 border-amber-200/40" },
+  { key: "copilot", label: "Copilot", class: "bg-pink-100/40 text-pink-800 dark:bg-pink-950/20 dark:text-pink-300 border-pink-200/40" },
+  { key: "gemini", label: "Gemini", class: "bg-blue-100/40 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300 border-blue-200/40" },
+  { key: "other", label: "Other", class: "bg-zinc-100/50 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-800" },
 ];
 
 export function SuspectPicker({ value, onChange }: SuspectPickerProps) {
   return (
     <div className="space-y-1.5">
-      <label className="font-sans text-xs font-semibold text-ink/70 block">
+      <label className="font-sans text-xs font-semibold text-ink/70 dark:text-zinc-400 block">
         Suspect (Required)
       </label>
       <div className="flex flex-wrap gap-2">
@@ -28,10 +28,10 @@ export function SuspectPicker({ value, onChange }: SuspectPickerProps) {
               key={s.key}
               type="button"
               onClick={() => onChange(s.key)}
-              className={`px-3 py-1 rounded-full text-xs font-medium border transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-full text-xs font-semibold border transition-all cursor-pointer ${
                 isSelected
-                  ? "bg-volt text-ink border-ink/40 font-semibold shadow-sm"
-                  : "bg-paper border-ink/20 text-ink/80 hover:bg-ink/5 hover:border-ink/35"
+                  ? `${s.class} shadow-sm border-zinc-300 dark:border-zinc-700 scale-105`
+                  : "bg-paper dark:bg-zinc-950 border-ink/10 dark:border-zinc-800 text-ink/70 dark:text-zinc-400 hover:bg-ink/5 dark:hover:bg-zinc-900/60"
               }`}
             >
               {s.label}

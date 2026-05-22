@@ -31,7 +31,7 @@ const NOUNS = [
 export function generateRandomUsername(): string {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const num = Math.floor(Math.random() * 9999);
+  const num = Math.floor(100000 + Math.random() * 899999);
   return `${adj}_${noun}_${num}`;
 }
 

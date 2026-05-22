@@ -1,8 +1,8 @@
-import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved } from "@/lib/store";
+import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent } from "@/lib/store";
 import { timeAgo } from "@/lib/store";
 import { useRouter, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
-import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark } from "lucide-react";
+import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2 } from "lucide-react";
 
 export function FeedV2() {
   const { posts, comments, user } = useStore();
@@ -566,6 +566,51 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
   const [newCommentBody, setNewCommentBody] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
+  // Editing state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(post.title);
+  const [editedBody, setEditedBody] = useState(post.body);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
+  // Kebab Menu & Report states
+  const [showPostMenu, setShowPostMenu] = useState(false);
+  const [showReportPostModal, setShowReportPostModal] = useState(false);
+  const [postReportReason, setPostReportReason] = useState("Spam or duplicate");
+  const [isSubmittingPostReport, setIsSubmittingPostReport] = useState(false);
+  const [reportSuccessToast, setReportSuccessToast] = useState(false);
+
+  const isAuthor = !!(user && (
+    (user.username && post.author.toLowerCase() === user.username.toLowerCase()) || 
+    (post.authorSessionId && post.authorSessionId === user.id)
+  ));
+
+  const handleSaveEdit = async () => {
+    if (!editedTitle.trim() || !editedBody.trim() || isSavingEdit) return;
+    setIsSavingEdit(true);
+    try {
+      await updatePost(post.id, {
+        title: editedTitle.trim(),
+        body: editedBody.trim(),
+      });
+      setIsEditing(false);
+    } catch (err) {
+      console.error("Failed to update post:", err);
+      alert("Failed to save changes. Please try again.");
+    } finally {
+      setIsSavingEdit(false);
+    }
+  };
+
+  const handleDeletePost = async () => {
+    if (!window.confirm("Are you sure you want to delete this confession forever? This cannot be undone.")) return;
+    try {
+      await deletePost(post.id);
+    } catch (err) {
+      console.error("Failed to delete post:", err);
+      alert("Failed to delete confession.");
+    }
+  };
+
   const postComments = comments.filter((c: any) => c.postId === post.id);
   const isSaved = isPostSaved(post.id);
 
@@ -613,25 +658,190 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
         />
       </div>
       <div className="flex-1 text-left min-w-0">
-        <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
-          <span className="font-bold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors">{post.author}</span>
-          <span className="text-[13px] text-muted-foreground">@{post.author}</span>
-          <span className="text-muted-foreground px-0.5 text-xs">·</span>
-          <span className="text-[13px] text-muted-foreground">{timeAgo(post.createdAt)}</span>
+        <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="font-bold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors">{post.author}</span>
+            <span className="text-[13px] text-muted-foreground">@{post.author}</span>
+            <span className="text-muted-foreground px-0.5 text-xs">·</span>
+            <span className="text-[13px] text-muted-foreground">{timeAgo(post.createdAt)}</span>
+          </div>
+
+          {/* Three Dots Post Dropdown Menu */}
+          {!isEditing && (
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPostMenu(!showPostMenu);
+                }}
+                className="p-1.5 text-muted-foreground hover:text-ink dark:hover:text-zinc-250 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer shrink-0"
+                title="Post options"
+              >
+                <MoreHorizontal className="w-4.5 h-4.5" />
+              </button>
+
+              {showPostMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-20 cursor-default" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowPostMenu(false);
+                    }} 
+                  />
+                  <div className="absolute right-0 top-full mt-1.5 w-40 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl z-35 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-100">
+                    <div className="py-1">
+                      {isAuthor ? (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setIsEditing(true);
+                              setShowPostMenu(false);
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-[13px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
+                          >
+                            <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                            Edit Post
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowPostMenu(false);
+                              handleDeletePost();
+                            }}
+                            className="w-full text-left px-3.5 py-2.5 text-[13px] text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Delete Post
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowReportPostModal(true);
+                            setShowPostMenu(false);
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 text-[13px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
+                        >
+                          <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+                          Report Post
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
         
-        <div className="text-[15px] leading-relaxed text-ink/95 dark:text-zinc-200">
-          <h4 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 leading-snug mb-1">{post.title}</h4>
-          <p className="text-ink/80 dark:text-zinc-300 font-normal">{post.body}</p>
-        </div>
+        {isEditing ? (
+          <div className="space-y-3.5 mt-2 bg-zinc-50 dark:bg-zinc-900/10 p-4 rounded-2xl border border-zinc-200/20 dark:border-zinc-800/40">
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Confession Title</label>
+              <input
+                type="text"
+                value={editedTitle}
+                onChange={(e) => setEditedTitle(e.target.value)}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 px-3 py-1.5 rounded-xl text-[14px] font-bold text-ink dark:text-zinc-100 placeholder-muted-foreground focus:outline-none focus:border-hot dark:focus:border-hot"
+                placeholder="Title your disaster..."
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Crime Scene Description</label>
+              <textarea
+                value={editedBody}
+                onChange={(e) => setEditedBody(e.target.value)}
+                rows={3}
+                className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 px-3 py-2 rounded-xl text-[13px] font-normal text-ink dark:text-zinc-300 placeholder-muted-foreground focus:outline-none focus:border-hot dark:focus:border-hot"
+                placeholder="What did the AI do to your code?"
+              />
+            </div>
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(false);
+                  setEditedTitle(post.title);
+                  setEditedBody(post.body);
+                }}
+                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors uppercase tracking-wider text-ink dark:text-zinc-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSavingEdit || !editedTitle.trim() || !editedBody.trim()}
+                onClick={handleSaveEdit}
+                className="px-4 py-1.5 bg-hot text-paper text-[11px] font-bold rounded-full hover:bg-hot/90 disabled:opacity-50 transition-colors uppercase tracking-wider shadow-sm cursor-pointer"
+              >
+                {isSavingEdit ? "Saving..." : "Save Changes"}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="text-[15px] leading-relaxed text-ink/95 dark:text-zinc-200">
+            <h4 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 leading-snug mb-1">{post.title}</h4>
+            <p className="text-ink/80 dark:text-zinc-300 font-normal mb-1">{post.body}</p>
+
+            {/* Crime Scene Image Media (Reddit/X/Substack Style) */}
+            {post.crimeSceneImage && (
+              <div className="mt-3.5 overflow-hidden rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center shadow-sm max-w-full">
+                <img 
+                  src={post.crimeSceneImage} 
+                  alt="Crime scene" 
+                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300" 
+                  loading="lazy"
+                />
+              </div>
+            )}
+
+            {/* AI Defense & Proof Image Section */}
+            {post.aiDefense && (
+              <div className="mt-3.5 p-4 bg-zinc-50/50 dark:bg-zinc-900/10 rounded-2xl border border-zinc-200/30 dark:border-zinc-800/30">
+                <div className="text-[10px] uppercase font-extrabold text-hot tracking-widest mb-1.5 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 bg-hot rounded-full"></span>
+                  AI&apos;s Defense
+                </div>
+                <p className="text-[13px] text-ink/75 dark:text-zinc-400 italic leading-relaxed font-normal">
+                  &ldquo;{post.aiDefense}&rdquo;
+                </p>
+                {post.aiDefenseImage && (
+                  <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200/40 dark:border-zinc-800/50 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center max-w-full">
+                    <img 
+                      src={post.aiDefenseImage} 
+                      alt="AI defense proof" 
+                      className="max-h-[384px] w-full object-contain rounded-xl hover:scale-[1.005] transition-all duration-300"
+                      loading="lazy"
+                    />
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Generated Meme Image Media */}
+            {post.memeUrl && (
+              <div className="mt-3.5 overflow-hidden rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center shadow-sm max-w-full">
+                <img 
+                  src={post.memeUrl} 
+                  alt="Confession meme" 
+                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300"
+                  loading="lazy"
+                />
+              </div>
+            )}
+          </div>
+        )}
         
         {/* Modern Interactive Action Bar */}
         <div className="flex items-center justify-between mt-5 pt-3.5 border-t border-ink/5 dark:border-zinc-900/60 flex-wrap gap-4 select-none">
           {/* Left Side: Reactions, Comments, Share */}
-          <div className="flex items-center gap-3 text-muted-foreground text-[13px] flex-1">
+          <div className="flex items-center gap-3 text-muted-foreground text-[13px] flex-1 min-w-0">
             
             {/* Reactions Group */}
-            <div className="flex items-center gap-1 bg-zinc-50 dark:bg-zinc-900/40 p-0.5 rounded-full border border-zinc-200/30 dark:border-zinc-800/40 flex-wrap">
+            <div className="flex flex-row items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900/40 p-0.5 rounded-full border border-zinc-200/30 dark:border-zinc-800/40">
               {(Object.keys(REACTION_META) as Reaction[]).map((rKey) => {
                 const rMeta = REACTION_META[rKey];
                 const active = hasReacted(post.id, rKey);
@@ -644,15 +854,19 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
                       e.stopPropagation(); // prevent navigating to details page
                       toggleReaction(post.id, rKey);
                     }}
-                    title={rMeta.label}
-                    className={`flex items-center gap-1 px-2.5 py-1 rounded-full transition-all cursor-pointer ${
+                    className={`relative group flex items-center gap-1 px-2 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
                       active 
                         ? "bg-hot/15 text-hot font-bold" 
                         : "hover:bg-ink/5 dark:hover:bg-zinc-800/80 hover:text-ink dark:hover:text-zinc-200"
                     }`}
                   >
-                    <span>{rMeta.emoji}</span>
-                    <span className="text-[11px]">{count}</span>
+                    {/* Instant Custom Tooltip */}
+                    <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider bg-zinc-900 dark:bg-zinc-850 text-zinc-100 rounded-lg shadow-xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity duration-75 whitespace-nowrap z-30 border border-zinc-800 dark:border-zinc-700">
+                      {rMeta.label}
+                    </span>
+
+                    <span className="text-xs sm:text-sm">{rMeta.emoji}</span>
+                    <span className="text-[10px] sm:text-[11px]">{count}</span>
                   </button>
                 );
               })}
@@ -664,7 +878,7 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
                 e.stopPropagation();
                 setShowComments(!showComments);
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all cursor-pointer group ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all cursor-pointer group shrink-0 ${
                 showComments 
                   ? "bg-hot/10 text-hot font-bold" 
                   : "hover:bg-hot/10 hover:text-hot dark:hover:bg-hot/15 text-muted-foreground"
@@ -722,44 +936,20 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
           <div className="mt-4 pt-4 border-t border-ink/5 dark:border-zinc-900/60 space-y-4">
             {/* Comments List */}
             <div className="space-y-3.5 max-h-[300px] overflow-y-auto pr-1">
-              {postComments.map((c: any) => {
-                const commentLiked = hasLikedComment(c.id);
-                return (
-                  <div key={c.id} className="flex gap-3 text-left items-start py-1">
-                    <img 
-                      src={getAvatarUrl(c.author)} 
-                      alt="avatar" 
-                      className="w-7 h-7 rounded-full bg-ink/5 dark:bg-zinc-900 border border-ink/5 dark:border-zinc-800 object-cover shrink-0" 
-                    />
-                    <div className="flex-1 min-w-0 flex items-start gap-2">
-                      <div className="flex-1 bg-zinc-50/50 dark:bg-zinc-900/20 px-3.5 py-2.5 rounded-2xl border border-zinc-200/20 dark:border-zinc-800/20">
-                        <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                          <span className="font-bold text-[12px] text-ink dark:text-zinc-200">@{c.author}</span>
-                          <span className="text-[10px] text-muted-foreground">{timeAgo(c.createdAt)}</span>
-                        </div>
-                        <p className="text-[13px] text-ink/90 dark:text-zinc-300 leading-normal font-normal">{c.body}</p>
-                      </div>
-                      
-                      {/* Comment Like Button */}
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleLikeComment(c.id);
-                        }}
-                        className={`p-1.5 rounded-full transition-all cursor-pointer hover:bg-rose-500/10 shrink-0 ${
-                          commentLiked 
-                            ? "text-rose-500 bg-rose-500/5" 
-                            : "text-muted-foreground hover:text-rose-500"
-                        }`}
-                        title={commentLiked ? "Unlike Comment" : "Like Comment"}
-                      >
-                        <Heart className={`w-3.5 h-3.5 ${commentLiked ? "fill-current" : ""}`} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              {postComments.map((c: any) => (
+                <CommentItem 
+                  key={c.id} 
+                  comment={c} 
+                  post={post} 
+                  onReplyClick={(author) => {
+                    setNewCommentBody("@" + author + " ");
+                    setTimeout(() => {
+                      const el = document.getElementById(`comment-input-${post.id}`) as HTMLInputElement;
+                      if (el) el.focus();
+                    }, 50);
+                  }}
+                />
+              ))}
               
               {postComments.length === 0 && (
                 <p className="text-xs text-muted-foreground text-center py-2">No replies yet. Be the first to heal this vibe coder!</p>
@@ -775,6 +965,7 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
               />
               <div className="flex-1 flex gap-2">
                 <input
+                  id={`comment-input-${post.id}`}
                   type="text"
                   placeholder="Write a supportive reply..."
                   value={newCommentBody}
@@ -793,6 +984,326 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
           </div>
         )}
       </div>
+
+      {/* Report Post Modal */}
+      {showReportPostModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-150">
+            <h3 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 mb-1 flex items-center gap-2">
+              <Flag className="w-4 h-4 text-hot" /> Report Confession
+            </h3>
+            <p className="text-[12px] text-muted-foreground mb-4">
+              Help us keep the wall of shame high-quality. Why are you reporting this failure?
+            </p>
+            
+            <div className="space-y-3 mb-6">
+              {[
+                "Spam or duplicate",
+                "Harassment or abuse",
+                "AI Hallucinations / Fake confession",
+                "Not related to developer struggles"
+              ].map((reasonOption) => (
+                <label 
+                  key={reasonOption} 
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+                    postReportReason === reasonOption 
+                      ? "bg-hot/5 border-hot/30 text-hot dark:bg-hot/10 dark:border-hot/40" 
+                      : "border-zinc-150 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 text-ink/80 dark:text-zinc-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="postReportReason"
+                    value={reasonOption}
+                    checked={postReportReason === reasonOption}
+                    onChange={() => setPostReportReason(reasonOption)}
+                    className="accent-hot cursor-pointer"
+                  />
+                  <span className="text-[13px] font-medium leading-none">{reasonOption}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowReportPostModal(false)}
+                className="px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-[12px] font-bold rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors uppercase tracking-wider text-ink dark:text-zinc-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingPostReport}
+                onClick={async () => {
+                  setIsSubmittingPostReport(true);
+                  try {
+                    await reportContent("post", post.id, postReportReason);
+                    setShowReportPostModal(false);
+                    setReportSuccessToast(true);
+                    setTimeout(() => setReportSuccessToast(false), 3000);
+                  } catch (err) {
+                    alert("Failed to submit report. Please try again.");
+                  } finally {
+                    setIsSubmittingPostReport(false);
+                  }
+                }}
+                className="px-4 py-2 bg-hot text-paper text-[12px] font-bold rounded-full hover:bg-hot/90 transition-colors uppercase tracking-wider shadow-sm cursor-pointer"
+              >
+                {isSubmittingPostReport ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {reportSuccessToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-650 text-white font-semibold text-[13px] py-3 px-5 rounded-xl shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-4 duration-200">
+          <CheckCircle2 className="w-4.5 h-4.5" />
+          <span>Report submitted successfully. Thank you!</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CommentItem({ comment, post, onReplyClick }: { comment: any; post: any; onReplyClick: (author: string) => void }) {
+  const { user } = useStore();
+  const commentLiked = hasLikedComment(comment.id);
+
+  const [showCommentMenu, setShowCommentMenu] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportReason, setReportReason] = useState("Spam or duplicate");
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [successToast, setSuccessToast] = useState(false);
+
+  // Check if I am the comment author
+  const isMyComment = !!(user && (
+    (user.username && comment.author.toLowerCase() === user.username.toLowerCase()) ||
+    (comment.authorSessionId && comment.authorSessionId === user.id)
+  ));
+
+  // Check if I am the post owner (so I can moderate any comments on my post)
+  const isPostOwner = !!(user && (
+    (user.username && post.author.toLowerCase() === user.username.toLowerCase()) ||
+    (post.authorSessionId && post.authorSessionId === user.id)
+  ));
+
+  // Check if this comment is a reply to MY comment (contains my username or my handle)
+  const isReplyToMyComment = !!(user && user.username && comment.body.includes(`@${user.username}`));
+
+  // Who can delete this comment? Either the comment author, or the post owner, or if it replies to my comment!
+  const canDelete = isMyComment || isPostOwner || isReplyToMyComment;
+
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this support reply forever?")) return;
+    try {
+      await deleteComment(comment.id);
+    } catch (err) {
+      alert("Failed to delete comment.");
+    }
+  };
+
+  return (
+    <div className="flex gap-3 text-left items-start py-1">
+      <img 
+        src={getAvatarUrl(comment.author)} 
+        alt="avatar" 
+        className="w-7 h-7 rounded-full bg-ink/5 dark:bg-zinc-900 border border-ink/5 dark:border-zinc-800 object-cover shrink-0" 
+      />
+      <div className="flex-1 min-w-0 flex items-start gap-2">
+        <div className="flex-1 bg-zinc-50/50 dark:bg-zinc-900/20 px-3.5 py-2.5 rounded-2xl border border-zinc-200/20 dark:border-zinc-800/20 relative">
+          <div className="flex items-center justify-between gap-1.5 mb-1 flex-wrap">
+            <div className="flex items-center gap-1.5 flex-wrap">
+              <span className="font-bold text-[12px] text-ink dark:text-zinc-200">@{comment.author}</span>
+              <span className="text-[10px] text-muted-foreground">{timeAgo(comment.createdAt)}</span>
+            </div>
+            
+            {/* Comment Three-Dot Kebab Menu */}
+            <div className="relative">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowCommentMenu(!showCommentMenu);
+                }}
+                className="p-1 text-muted-foreground hover:text-ink dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer shrink-0"
+              >
+                <MoreHorizontal className="w-3.5 h-3.5" />
+              </button>
+
+              {showCommentMenu && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-20 cursor-default" 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setShowCommentMenu(false);
+                    }} 
+                  />
+                  <div className="absolute right-0 top-full mt-1 w-36 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-855 shadow-xl z-35 overflow-hidden animate-in fade-in slide-in-from-top-1 duration-100">
+                    <div className="py-1">
+                      {canDelete ? (
+                        <>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setShowCommentMenu(false);
+                              handleDelete();
+                            }}
+                            className="w-full text-left px-3 py-1.5 text-[12px] text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-1.5 font-semibold cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                            Delete
+                          </button>
+                          {!isMyComment && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setShowReportModal(true);
+                                setShowCommentMenu(false);
+                              }}
+                              className="w-full text-left px-3 py-1.5 text-[12px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-1.5 font-semibold cursor-pointer"
+                            >
+                              <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+                              Report
+                            </button>
+                          )}
+                        </>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowReportModal(true);
+                            setShowCommentMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-1.5 text-[12px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-1.5 font-semibold cursor-pointer"
+                        >
+                          <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+                          Report
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+          <p className="text-[13px] text-ink/90 dark:text-zinc-300 leading-normal font-normal">{comment.body}</p>
+        </div>
+        
+        {/* Comment Action Buttons (Like & Reply) */}
+        <div className="flex flex-col gap-1 shrink-0 mt-1">
+          {/* Like */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleLikeComment(comment.id);
+            }}
+            className={`p-1.5 rounded-full transition-all cursor-pointer hover:bg-rose-500/10 ${
+              commentLiked 
+                ? "text-rose-500 bg-rose-500/5" 
+                : "text-muted-foreground hover:text-rose-500"
+            }`}
+            title={commentLiked ? "Unlike" : "Like"}
+          >
+            <Heart className={`w-3.5 h-3.5 ${commentLiked ? "fill-current" : ""}`} />
+          </button>
+          
+          {/* Reply */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onReplyClick(comment.author);
+            }}
+            className="p-1.5 rounded-full text-muted-foreground hover:text-hot hover:bg-hot/5 transition-all cursor-pointer"
+            title={`Reply to @${comment.author}`}
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Report Comment Modal */}
+      {showReportModal && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-150">
+            <h3 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 mb-1 flex items-center gap-2">
+              <Flag className="w-4 h-4 text-hot" /> Report Reply
+            </h3>
+            <p className="text-[12px] text-muted-foreground mb-4">
+              Help us keep the conversation helpful. Why are you reporting this reply?
+            </p>
+            
+            <div className="space-y-3 mb-6">
+              {[
+                "Spam or duplicate",
+                "Harassment or abuse",
+                "Offensive or off-topic content"
+              ].map((reasonOption) => (
+                <label 
+                  key={reasonOption} 
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl border cursor-pointer transition-all ${
+                    reportReason === reasonOption 
+                      ? "bg-hot/5 border-hot/30 text-hot dark:bg-hot/10 dark:border-hot/40" 
+                      : "border-zinc-150 dark:border-zinc-850 hover:bg-zinc-50 dark:hover:bg-zinc-900/50 text-ink/80 dark:text-zinc-300"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="commentReportReason"
+                    value={reasonOption}
+                    checked={reportReason === reasonOption}
+                    onChange={() => setReportReason(reasonOption)}
+                    className="accent-hot cursor-pointer"
+                  />
+                  <span className="text-[13px] font-medium leading-none">{reasonOption}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowReportModal(false)}
+                className="px-4 py-2 border border-zinc-200 dark:border-zinc-800 text-[12px] font-bold rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors uppercase tracking-wider text-ink dark:text-zinc-300"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isSubmittingReport}
+                onClick={async () => {
+                  setIsSubmittingReport(true);
+                  try {
+                    await reportContent("comment", comment.id, reportReason);
+                    setShowReportModal(false);
+                    setSuccessToast(true);
+                    setTimeout(() => setSuccessToast(false), 3000);
+                  } catch (err) {
+                    alert("Failed to submit report. Please try again.");
+                  } finally {
+                    setIsSubmittingReport(false);
+                  }
+                }}
+                className="px-4 py-2 bg-hot text-paper text-[12px] font-bold rounded-full hover:bg-hot/90 transition-colors uppercase tracking-wider shadow-sm cursor-pointer"
+              >
+                {isSubmittingReport ? "Submitting..." : "Submit Report"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Success Toast */}
+      {successToast && (
+        <div className="fixed bottom-6 right-6 z-50 bg-emerald-650 text-white font-semibold text-[13px] py-3 px-5 rounded-xl shadow-2xl flex items-center gap-2 animate-in slide-in-from-bottom-4 duration-200">
+          <CheckCircle2 className="w-4.5 h-4.5" />
+          <span>Report submitted successfully. Thank you!</span>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { Link, useRouter } from "@tanstack/react-router";
 
 export function Header() {
   const router = useRouter();
-  const isV2 = router.state.location.pathname === '/';
+  const isV2 = router.state.location.pathname === '/' || router.state.location.pathname === '/submit';
 
   return (
     <header className={isV2 ? "z-40 bg-paper" : "brutal-border border-x-0 border-t-0 bg-paper sticky top-0 z-40"}>

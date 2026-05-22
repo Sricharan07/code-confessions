@@ -27,11 +27,8 @@ export type Plea = "innocent" | "deserve_it" | "cooked";
 export type Reaction =
   | "cooked"
   | "relatable"
-  | "segfault"
   | "skill_issue"
-  | "rip_repo"
   | "cursed"
-  | "samehere"
   | string; // allows secret reactions
 
 export type Status = "broken" | "solved";
@@ -72,11 +69,8 @@ const VOTED_COURT_KEY = "vibefail.voted_court.v1";
 export const REACTION_META: Record<string, { label: string; emoji: string }> = {
   cooked: { label: "cooked", emoji: "💀" },
   relatable: { label: "relatable", emoji: "😭" },
-  segfault: { label: "segfault", emoji: "🫥" },
   skill_issue: { label: "skill issue", emoji: "🤡" },
-  rip_repo: { label: "rip repo", emoji: "🪦" },
   cursed: { label: "cursed", emoji: "🔥" },
-  samehere: { label: "same here", emoji: "🫠" },
 };
 
 export const TOOLS = ["cursor", "chatgpt", "claude", "copilot", "gemini", "other"];
@@ -209,8 +203,19 @@ const NOUNS = ["Course", "Razzmatazz", "Pointer", "Exception", "Dev", "Agent", "
 export function generateRandomUsername() {
   const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
   const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
-  const num = Math.floor(Math.random() * 9999);
-  return `${adj}_${noun}_${num}`;
+  let name = "";
+  let attempts = 0;
+  
+  do {
+    const num = Math.floor(100000 + Math.random() * 899999);
+    name = `${adj}_${noun}_${num}`;
+    attempts++;
+  } while (attempts < 100 && (
+    posts.some((p) => p.author.toLowerCase() === name.toLowerCase()) ||
+    comments.some((c) => c.author.toLowerCase() === name.toLowerCase())
+  ));
+  
+  return name;
 }
 
 export async function ensureGuestSession() {
@@ -461,10 +466,21 @@ function safeUUID(): string {
 }
 
 export function randomHandle() {
-  const hex = Math.floor(Math.random() * 0xffff)
-    .toString(16)
-    .padStart(4, "0");
-  return `anon-${hex}`;
+  let handle = "";
+  let attempts = 0;
+  
+  do {
+    const hex = Math.floor(0x100000 + Math.random() * 0xefffff)
+      .toString(16)
+      .padStart(6, "0");
+    handle = `anon-${hex}`;
+    attempts++;
+  } while (attempts < 100 && (
+    posts.some((p) => p.author.toLowerCase() === handle.toLowerCase()) ||
+    comments.some((c) => c.author.toLowerCase() === handle.toLowerCase())
+  ));
+  
+  return handle;
 }
 
 export function createPost(
@@ -480,11 +496,8 @@ export function createPost(
     reactions: {
       cooked: 0,
       relatable: 0,
-      segfault: 0,
       skill_issue: 0,
-      rip_repo: 0,
       cursed: 0,
-      samehere: 0,
     },
     status: verdict === "solved" ? "solved" : "broken",
     court: { ai_wrong: 0, skill_issue: 0 },
@@ -671,6 +684,65 @@ export async function deletePost(postId: string) {
   persist();
 
   await supabase.from("posts").delete().eq("id", postId);
+}
+
+export async function updatePost(
+  postId: string,
+  updates: Partial<Omit<Post, "id" | "createdAt" | "reactions" | "court" | "author" | "authorSessionId">>
+) {
+  init();
+  await ensureGuestSession();
+  posts = posts.map((p) => (p.id === postId ? { ...p, ...updates } : p));
+  persist();
+
+  const dbUpdates: Record<string, any> = {};
+  if (updates.title !== undefined) dbUpdates.title = updates.title;
+  if (updates.body !== undefined) dbUpdates.body = updates.body;
+  if (updates.tool !== undefined) dbUpdates.tool = updates.tool;
+  if (updates.vibe !== undefined) dbUpdates.vibe = updates.vibe;
+  if (updates.verdict !== undefined) dbUpdates.verdict = updates.verdict;
+  if (updates.plea !== undefined) dbUpdates.plea = updates.plea;
+  if (updates.aiDefense !== undefined) dbUpdates.ai_defense = updates.aiDefense;
+  if (updates.memeUrl !== undefined) dbUpdates.meme_url = updates.memeUrl;
+  if (updates.crimeSceneImage !== undefined) dbUpdates.crime_scene_image = updates.crimeSceneImage;
+  if (updates.aiDefenseImage !== undefined) dbUpdates.ai_defense_image = updates.aiDefenseImage;
+  if (updates.status !== undefined) dbUpdates.verdict = updates.status === "solved" ? "solved" : "still_broken";
+
+  const { error } = await supabase.from("posts").update(dbUpdates).eq("id", postId);
+  if (error) {
+    console.error("Failed to update post in database:", error);
+    throw error;
+  }
+}
+
+export async function deleteComment(commentId: string) {
+  init();
+  await ensureGuestSession();
+  comments = comments.filter((c) => c.id !== commentId);
+  persist();
+
+  const { error } = await supabase.from("comments").delete().eq("id", commentId);
+  if (error) {
+    console.error("Failed to delete comment from database:", error);
+    throw error;
+  }
+}
+
+export async function reportContent(targetType: "post" | "comment", targetId: string, reason: string) {
+  init();
+  await ensureGuestSession();
+  
+  const { error } = await supabase.from("reports").insert({
+    reporter_session_id: user?.id || null,
+    target_type: targetType,
+    target_id: targetId,
+    reason: reason,
+  });
+
+  if (error) {
+    console.error("Failed to submit report:", error);
+    throw error;
+  }
 }
 
 export function timeAgo(ts: number) {

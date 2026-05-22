@@ -166,7 +166,7 @@ export const createPostFn = createServerFn({ method: "POST" })
         ai_defense_image: aiDefenseImage ?? null,
         author: anonHandle,
         author_session_id: sessionId,
-        reactions: { cooked: 0, relatable: 0, segfault: 0, skill_issue: 0, rip_repo: 0, cursed: 0, samehere: 0 },
+        reactions: { cooked: 0, relatable: 0, skill_issue: 0, cursed: 0 },
         court: { ai_wrong: 0, skill_issue: 0 },
         hidden: false,
       });
@@ -216,7 +216,7 @@ export const toggleReactionFn = createServerFn({ method: "POST" })
       await checkRateLimit(sessionId, "react", 150);
 
       const secretKey = getActiveSecretReaction().key;
-      const allowedReactions = ["cooked", "relatable", "segfault", "skill_issue", "rip_repo", "cursed", "samehere", secretKey];
+      const allowedReactions = ["cooked", "relatable", "skill_issue", "cursed", secretKey];
       if (!allowedReactions.includes(reactionKey)) {
         throw new Error("ur input is cooked. fix it.");
       }

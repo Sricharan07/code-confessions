@@ -41,7 +41,7 @@
 :root {
   --paper: oklch(0.985 0.005 85);
   --ink: oklch(0.16 0.005 0);
-  --hot: oklch(0.68 0.22 38);
+  --hot: oklch(0.56 0.21 275);
   --volt: oklch(0.93 0.21 100);
 
   --background: var(--paper);
@@ -69,7 +69,7 @@
 .dark {
   --paper: oklch(0.18 0.005 0);
   --ink: oklch(0.96 0.005 0);
-  --hot: oklch(0.68 0.22 38);
+  --hot: oklch(0.64 0.18 275);
   --volt: oklch(0.93 0.21 100);
 
   --background: var(--paper);

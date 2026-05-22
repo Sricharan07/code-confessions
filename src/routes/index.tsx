@@ -201,7 +201,7 @@ function V2Layout() {
         </aside>
 
         {/* Main Feed Column */}
-        <main className="flex-1 w-full max-w-[760px] border-r border-ink/10 h-full overflow-y-auto pb-20 md:pb-0">
+        <main className="flex-1 w-full max-w-[850px] border-r border-ink/10 h-full overflow-y-auto pb-20 md:pb-0">
           <FeedV2 />
         </main>
         
@@ -219,12 +219,12 @@ function V2Layout() {
               <p className="text-muted-foreground text-xs leading-relaxed mb-5">
                 Join the most chaotic and hilarious developer community. Share receipts, read code disasters, and feel less alone.
               </p>
-              <button 
-                onClick={() => setAuthOpen(true)}
-                className="w-full py-2 bg-hot hover:bg-hot/90 text-paper font-bold text-xs rounded-full transition-colors mb-2.5 shadow-sm uppercase tracking-wider"
+              <Link 
+                to="/submit"
+                className="block w-full py-2 bg-hot hover:bg-hot/90 text-paper font-bold text-xs rounded-full transition-colors mb-2.5 shadow-sm uppercase tracking-wider text-center cursor-pointer"
               >
                 Start Confessing
-              </button>
+              </Link>
               <button 
                 onClick={() => setAuthOpen(true)}
                 className="w-full py-2 bg-ink dark:bg-zinc-800 text-paper dark:text-zinc-100 hover:opacity-90 font-bold text-xs rounded-full transition-colors border border-ink/10 uppercase tracking-wider"
