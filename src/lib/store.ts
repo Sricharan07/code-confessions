@@ -529,7 +529,6 @@ export function createPost(
 
   return optimisticPost;
 }
-}
 
 export async function addComment(postId: string, body: string) {
   init();
@@ -688,7 +687,6 @@ export interface SecretReaction {
   expiresAt: number;
 }
 
-export const TOOLS = ["cursor", "chatgpt", "claude", "copilot", "gemini", "other"];
 
 // Bookmark/Save Confessions
 const SAVED_POSTS_KEY = "vibefail.saved_posts.v1";
