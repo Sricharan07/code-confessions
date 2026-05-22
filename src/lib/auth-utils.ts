@@ -1,6 +1,6 @@
-import { supabase } from "./supabase";
-import { setAuthUser } from "./store";
-import { createServerFn } from "@tanstack/react-start";
+import { setAuthUser, apiCall, setToken } from "./store";
+
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 const ADJECTIVES = [
   "Cursed", "Caffeinated", "Sleepy", "Buggy", "Janky", 
@@ -35,62 +35,20 @@ export function generateRandomUsername(): string {
   return `${adj}_${noun}_${num}`;
 }
 
-export const generateLlmUsernames = createServerFn({
-  method: "GET",
-})
-  .handler(async () => {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return null;
+async function generateLlmUsernames(): Promise<string[] | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/usernames`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
     }
-
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `Generate exactly 5 highly creative, funny, sarcastic developer-themed usernames in a plain JSON list of strings (e.g. ["BasedIntern_99", "RefactoredSpaghetti_404"]). Do not use markdown backticks or block syntax.`
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
-        }
-      );
-
-      if (!response.ok) {
-        console.warn("Gemini API request failed:", response.statusText);
-        return null;
-      }
-
-      const resData = await response.json();
-      const text = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        return null;
-      }
-
-      const usernames = JSON.parse(text.trim());
-      if (Array.isArray(usernames) && usernames.length > 0) {
-        return usernames;
-      }
-      return null;
-    } catch (err) {
-      console.warn("Error calling Gemini API:", err);
-      return null;
-    }
+    return null;
+  } catch {
+    return null;
   }
-);
+}
 
 export async function getCuratedUsernameSuggestions(count = 3): Promise<string[]> {
   try {
@@ -112,61 +70,46 @@ export async function getCuratedUsernameSuggestions(count = 3): Promise<string[]
   return suggestions;
 }
 
-/**
- * Ensures a valid Supabase user session exists before publishing a post.
- * If the current user is a guest (client-side only, no database record), 
- * it triggers an on-demand anonymous signup, registers their ghost profile,
- * updates the client store, and returns the newly generated user ID.
- * 
- * @returns The Supabase user UUID
- */
-export async function ensureSessionForPost(): Promise<string> {
-  let localUser: any = null;
-  
-  if (typeof window !== "undefined") {
-    try {
-      const raw = localStorage.getItem("vibefail.user.v1");
-      if (raw) {
-        localUser = JSON.parse(raw);
-      }
-    } catch (e) {
-      console.error("Failed to parse local user session", e);
-    }
-  }
-
-  // Case A: User is fully authenticated (either registered or already initialized guest)
-  if (localUser && localUser.id) {
-    return localUser.id;
-  }
-
-  // Case B: User is a client-side guest (id is null) or not signed in at all
-  const generatedUsername = generateRandomUsername();
-  
-  const { data, error } = await supabase.auth.signInAnonymously({
-    options: {
-      data: {
-        username: generatedUsername,
-        status: "ghost"
-      }
-    }
+export async function loginWithCredentials(username: string, password: string) {
+  const res = await fetch(`${API_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
   });
-
-  if (error) {
-    throw new Error(`Failed to initialize anonymous guest session: ${error.message}`);
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error || "Login failed");
   }
+  setToken(data.token, data.refreshToken);
+  setAuthUser(data.user);
+  return data.user;
+}
 
-  if (!data.user?.id) {
-    throw new Error("Supabase auth did not return a valid user ID.");
+export async function signupWithCredentials(username: string, password: string) {
+  const res = await fetch(`${API_URL}/api/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ username, password }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error || "Signup failed");
   }
+  setToken(data.token, data.refreshToken);
+  setAuthUser(data.user);
+  return data.user;
+}
 
-  // Update client store & localStorage with the registered guest details
-  const registeredGuest = {
-    username: generatedUsername,
-    isGuest: true,
-    id: data.user.id
-  };
-  
-  setAuthUser(registeredGuest);
-  
-  return data.user.id;
+export async function loginAsGuest() {
+  const res = await fetch(`${API_URL}/api/auth/guest`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+  });
+  const data = await res.json();
+  if (!res.ok || data.error) {
+    throw new Error(data.error || "Guest login failed");
+  }
+  setToken(data.token, data.refreshToken);
+  setAuthUser(data.user);
+  return data.user;
 }

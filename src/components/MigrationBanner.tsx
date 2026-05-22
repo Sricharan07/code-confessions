@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { createPostFn } from "@/server/confess";
+import { apiCall, getToken, ensureGuestSession } from "@/lib/store";
+
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 
 export function MigrationBanner() {
   const [visible, setVisible] = useState(false);
@@ -54,8 +56,16 @@ export function MigrationBanner() {
           tool = "other";
         }
 
-        await createPostFn({
-          data: {
+        await ensureGuestSession();
+        const token = getToken();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (token) {
+          headers["Authorization"] = `Bearer ${token}`;
+        }
+        const res = await fetch(`${API_URL}/api/posts`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
             title: oldPost.title || "confession from local storage",
             body: oldPost.body || "no body provided in the local history.",
             tool: tool,
@@ -64,8 +74,9 @@ export function MigrationBanner() {
             plea: oldPost.plea || undefined,
             aiDefense: oldPost.aiDefense || undefined,
             memeUrl: oldPost.memeUrl || undefined,
-          }
+          }),
         });
+        await res.json();
       }
 
       setProgress("★ done. ur fails are now public. cope.");

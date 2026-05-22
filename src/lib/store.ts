@@ -1,11 +1,40 @@
 import { useSyncExternalStore, useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
-import {
-  createPostFn,
-  toggleReactionFn,
-  voteCourtFn,
-  createCommentFn,
-} from "@/server/confess";
+
+const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const TOKEN_KEY = "vibefail.auth_token";
+const REFRESH_TOKEN_KEY = "vibefail.refresh_token";
+
+function getToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(token: string, refreshToken?: string) {
+  localStorage.setItem(TOKEN_KEY, token);
+  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+}
+
+function clearToken() {
+  localStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+async function apiCall(path: string, method: "GET" | "POST", body?: any) {
+  const headers: Record<string, string> = {};
+  const token = getToken();
+  if (token) {
+    headers["Authorization"] = `Bearer ${token}`;
+  }
+  if (method === "POST") {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+}
 
 export type AITool = "cursor" | "chatgpt" | "claude" | "copilot" | "gemini" | "other";
 
@@ -75,19 +104,6 @@ export const REACTION_META: Record<string, { label: string; emoji: string }> = {
 
 export const TOOLS = ["cursor", "chatgpt", "claude", "copilot", "gemini", "other"];
 
-function setCookie(name: string, value: string, days = 7) {
-  if (typeof document === "undefined") return;
-  const expires = new Date(Date.now() + days * 86400000).toUTCString();
-  const secureAttr = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${name}=${value}; path=/; expires=${expires}; SameSite=Lax${secureAttr}`;
-}
-
-function deleteCookie(name: string) {
-  if (typeof document === "undefined") return;
-  const secureAttr = window.location.protocol === "https:" ? "; Secure" : "";
-  document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC; SameSite=Lax${secureAttr}`;
-}
-
 function mapPostFromDb(p: any): Post {
   return {
     id: p.id,
@@ -97,27 +113,27 @@ function mapPostFromDb(p: any): Post {
     vibe: p.vibe || undefined,
     verdict: p.verdict,
     plea: p.plea || undefined,
-    aiDefense: p.ai_defense || undefined,
-    memeUrl: p.meme_url || undefined,
-    crimeSceneImage: p.crime_scene_image || undefined,
-    aiDefenseImage: p.ai_defense_image || undefined,
+    aiDefense: p.aiDefense || p.ai_defense || undefined,
+    memeUrl: p.memeUrl || p.meme_url || undefined,
+    crimeSceneImage: p.crimeSceneImage || p.crime_scene_image || undefined,
+    aiDefenseImage: p.aiDefenseImage || p.ai_defense_image || undefined,
     author: p.author,
-    authorSessionId: p.author_session_id || undefined,
+    authorSessionId: p.authorSessionId || p.author_session_id || undefined,
     reactions: p.reactions || {},
     court: p.court || { ai_wrong: 0, skill_issue: 0 },
     hidden: p.hidden || false,
-    createdAt: new Date(p.created_at).getTime(),
-    status: p.verdict === "solved" ? "solved" : "broken",
+    createdAt: typeof p.createdAt === "number" ? p.createdAt : new Date(p.created_at || p.createdAt).getTime(),
+    status: p.status || (p.verdict === "solved" ? "solved" : "broken"),
   };
 }
 
 function mapCommentFromDb(c: any): Comment {
   return {
     id: c.id,
-    postId: c.post_id,
+    postId: c.postId || c.post_id,
     body: c.body,
     author: c.author,
-    createdAt: new Date(c.created_at).getTime(),
+    createdAt: typeof c.createdAt === "number" ? c.createdAt : new Date(c.created_at || c.createdAt).getTime(),
   };
 }
 
@@ -152,43 +168,32 @@ export function getAvatarUrl(seed: string) {
 let userReactionsSet = new Set<string>();
 let userVotesMap = new Map<string, string>();
 
-async function loadUserReactionsAndVotes(userId: string) {
-  try {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role, username")
-      .eq("id", userId)
-      .single();
+async function loadUserReactionsAndVotes() {
+  const token = getToken();
+  if (!token) return;
 
-    if (profile) {
+  try {
+    const data = await apiCall("/api/user-data", "GET");
+
+    if (data.profile) {
       user = {
         ...user,
-        role: profile.role || "user",
-        username: profile.username || user?.username,
+        role: data.profile.role || "user",
+        username: data.profile.username || user?.username,
       };
     }
 
-    const { data: rxLogs } = await supabase
-      .from("reaction_logs")
-      .select("post_id, reaction_key")
-      .eq("session_id", userId);
-    
     userReactionsSet.clear();
-    if (rxLogs) {
-      rxLogs.forEach((r) => {
-        userReactionsSet.add(`${r.post_id}:${r.reaction_key}`);
+    if (data.reactions) {
+      data.reactions.forEach((r: any) => {
+        userReactionsSet.add(`${r.postId}:${r.reactionKey}`);
       });
     }
 
-    const { data: votes } = await supabase
-      .from("court_votes")
-      .select("post_id, verdict")
-      .eq("session_id", userId);
-    
     userVotesMap.clear();
-    if (votes) {
-      votes.forEach((v) => {
-        userVotesMap.set(v.post_id, v.verdict);
+    if (data.votes) {
+      data.votes.forEach((v: any) => {
+        userVotesMap.set(v.postId, v.verdict);
       });
     }
     persist();
@@ -221,181 +226,105 @@ export function generateRandomUsername() {
 export async function ensureGuestSession() {
   if (typeof window === "undefined") return null;
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if (session) {
-    setCookie("sb-access-token", session.access_token);
-    setCookie("sb-refresh-token", session.refresh_token);
-    return session;
+  // Already have a token — check if it's valid
+  const existingToken = getToken();
+  if (existingToken) {
+    return existingToken;
   }
 
-  const username = generateRandomUsername();
-  const email = `guest_${safeUUID().replace(/-/g, "")}@vibefail.local`;
-  const password = safeUUID();
-
-  const { data, error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      data: {
-        username,
-        is_guest: true,
-      },
-    },
-  });
-
-  if (error) {
-    console.error("Failed to auto-sign in guest:", error);
-    throw error;
+  // Create a new guest session via the worker
+  const data = await apiCall("/api/auth/guest", "POST");
+  if (data.error) {
+    console.error("Failed to create guest session:", data.error);
+    throw new Error(data.error);
   }
 
-  if (data.session) {
-    setCookie("sb-access-token", data.session.access_token);
-    setCookie("sb-refresh-token", data.session.refresh_token);
+  setToken(data.token, data.refreshToken);
+  user = data.user;
+  persist();
 
-    const isGuest = data.session.user.user_metadata.is_guest || false;
-    const usernameVal = data.session.user.user_metadata.username || data.session.user.email?.split("@")[0] || "anon";
-    user = { id: data.session.user.id, username: usernameVal, isGuest };
-    persist();
-  }
-
-  return data.session;
+  return data.token;
 }
+
+let pollInterval: any = null;
 
 function init() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
 
   // Load theme from localStorage on init
-  if (typeof window !== "undefined") {
-    try {
-      const storedTheme = localStorage.getItem("vibefail.theme.v1");
-      if (storedTheme) {
-        theme = JSON.parse(storedTheme);
-      }
-    } catch (e) {
-      console.error("Failed to load theme during init:", e);
+  try {
+    const storedTheme = localStorage.getItem("vibefail.theme.v1");
+    if (storedTheme) {
+      theme = JSON.parse(storedTheme);
     }
+  } catch (e) {
+    console.error("Failed to load theme during init:", e);
   }
 
-  // 1. Initial auth sync
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session?.user) {
-      const isGuest = session.user.user_metadata.is_guest || false;
-      const username = session.user.user_metadata.username || session.user.email?.split("@")[0] || "anon";
-      user = { id: session.user.id, username, isGuest };
-      setCookie("sb-access-token", session.access_token);
-      setCookie("sb-refresh-token", session.refresh_token);
-      loadUserReactionsAndVotes(session.user.id);
-      persist();
-    } else {
-      user = null;
-      userReactionsSet.clear();
-      userVotesMap.clear();
-      persist();
-      ensureGuestSession().catch((err) => {
-        console.error("Auto guest session failed during init:", err);
-      });
-    }
-  });
+  // 1. Check existing session via worker
+  const token = getToken();
+  if (token) {
+    apiCall("/api/auth/session", "GET").then((data) => {
+      if (data.user) {
+        user = data.user;
+        loadUserReactionsAndVotes();
+        persist();
+      } else {
+        // Token is invalid — clear it and create new guest
+        clearToken();
+        user = null;
+        persist();
+        ensureGuestSession().catch((err) => {
+          console.error("Auto guest session failed during init:", err);
+        });
+      }
+    });
+  } else {
+    ensureGuestSession().catch((err) => {
+      console.error("Auto guest session failed during init:", err);
+    });
+  }
 
-  // 2. Auth state change listener
-  supabase.auth.onAuthStateChange((event, session) => {
-    if (session?.user) {
-      const isGuest = session.user.user_metadata.is_guest || false;
-      const username = session.user.user_metadata.username || session.user.email?.split("@")[0] || "anon";
-      user = { id: session.user.id, username, isGuest };
-      setCookie("sb-access-token", session.access_token);
-      setCookie("sb-refresh-token", session.refresh_token);
-      loadUserReactionsAndVotes(session.user.id);
-    } else {
-      user = null;
-      userReactionsSet.clear();
-      userVotesMap.clear();
-      deleteCookie("sb-access-token");
-      deleteCookie("sb-refresh-token");
-    }
-    persist();
-  });
-
-  // 3. Query posts and comments
+  // 2. Fetch initial posts and comments from worker
   (async () => {
     try {
-      const { data: postsData } = await supabase
-        .from("posts")
-        .select("*")
-        .eq("hidden", false);
-      if (postsData) {
+      const [postsData, commentsData] = await Promise.all([
+        apiCall("/api/posts", "GET"),
+        apiCall("/api/comments", "GET"),
+      ]);
+
+      if (Array.isArray(postsData)) {
         posts = postsData.map(mapPostFromDb);
       }
-
-      const { data: commentsData } = await supabase
-        .from("comments")
-        .select("*")
-        .eq("hidden", false);
-      if (commentsData) {
+      if (Array.isArray(commentsData)) {
         comments = commentsData.map(mapCommentFromDb);
       }
       persist();
     } catch (err) {
-      console.error("Failed to load initial data from Supabase:", err);
+      console.error("Failed to load initial data:", err);
     }
   })();
 
-  // 4. Realtime subscription
-  supabase
-    .channel("public:posts")
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "posts",
-    }, (payload) => {
-      if (payload.eventType === "INSERT") {
-        const newPost = mapPostFromDb(payload.new);
-        if (!newPost.hidden) {
-          if (!posts.some((p) => p.id === newPost.id)) {
-            posts = [newPost, ...posts];
-            persist();
-          }
-        }
-      } else if (payload.eventType === "UPDATE") {
-        const updatedPost = mapPostFromDb(payload.new);
-        if (updatedPost.hidden) {
-          posts = posts.filter((p) => p.id !== updatedPost.id);
-        } else {
-          posts = posts.map((p) => (p.id === updatedPost.id ? updatedPost : p));
-        }
-        persist();
-      } else if (payload.eventType === "DELETE") {
-        posts = posts.filter((p) => p.id !== payload.old.id);
-        persist();
-      }
-    })
-    .subscribe();
+  // 3. Poll for updates every 30 seconds (replaces Supabase realtime)
+  pollInterval = setInterval(async () => {
+    try {
+      const [postsData, commentsData] = await Promise.all([
+        apiCall("/api/posts", "GET"),
+        apiCall("/api/comments", "GET"),
+      ]);
 
-  // Subscribe to comments
-  supabase
-    .channel("public:comments")
-    .on("postgres_changes", {
-      event: "*",
-      schema: "public",
-      table: "comments",
-    }, (payload) => {
-      if (payload.eventType === "INSERT") {
-        const newComment = mapCommentFromDb(payload.new);
-        if (!comments.some((c) => c.id === newComment.id)) {
-          comments = [...comments, newComment];
-          persist();
-        }
-      } else if (payload.eventType === "UPDATE") {
-        const updatedComment = mapCommentFromDb(payload.new);
-        comments = comments.map((c) => (c.id === updatedComment.id ? updatedComment : c));
-        persist();
-      } else if (payload.eventType === "DELETE") {
-        comments = comments.filter((c) => c.id !== payload.old.id);
-        persist();
+      if (Array.isArray(postsData)) {
+        posts = postsData.map(mapPostFromDb);
       }
-    })
-    .subscribe();
+      if (Array.isArray(commentsData)) {
+        comments = commentsData.map(mapCommentFromDb);
+      }
+      persist();
+    } catch (err) {
+      // Silently fail on polling errors
+    }
+  }, 30000);
 }
 
 function persist() {
@@ -410,7 +339,7 @@ function persist() {
   listeners.forEach((l) => l());
 }
 
-function subscribe(l: () => void) {
+export function subscribe(l: () => void) {
   init();
   listeners.add(l);
   return () => listeners.delete(l);
@@ -443,14 +372,20 @@ export function setTheme(t: Theme) {
 export function setAuthUser(u: any) {
   init();
   user = u;
+  if (u) {
+    loadUserReactionsAndVotes();
+  }
   persist();
 }
 
 export function logout() {
   init();
-  supabase.auth.signOut();
+  apiCall("/api/auth/logout", "POST").catch(() => {});
+  clearToken();
   user = null;
   feedTab = "for-you";
+  userReactionsSet.clear();
+  userVotesMap.clear();
   persist();
 }
 
@@ -484,39 +419,38 @@ export function randomHandle() {
 }
 
 export function createPost(
-  input: Omit<Post, "id" | "createdAt" | "reactions" | "status" | "author" | "court"> & { author?: string, recaptchaToken?: string }
-) {
+  input: Omit<Post, "id" | "createdAt" | "reactions" | "status" | "author" | "court" | "verdict"> & { verdict?: Verdict, author?: string, recaptchaToken?: string }
+): Post {
   init();
   const id = safeUUID();
-  const verdict = input.verdict || "still_broken";
-
   const optimisticPost: Post = {
     id,
+    title: input.title,
+    body: input.body,
+    tool: input.tool,
+    vibe: input.vibe,
+    verdict: input.verdict || "still_broken",
+    plea: input.plea,
+    aiDefense: input.aiDefense,
+    memeUrl: input.memeUrl,
+    crimeSceneImage: input.crimeSceneImage,
+    aiDefenseImage: input.aiDefenseImage,
+    author: input.author || user?.username || randomHandle(),
+    authorSessionId: user?.id,
+    status: "broken",
     createdAt: Date.now(),
-    reactions: {
-      cooked: 0,
-      relatable: 0,
-      skill_issue: 0,
-      cursed: 0,
-    },
-    status: verdict === "solved" ? "solved" : "broken",
+    reactions: { cooked: 0, relatable: 0, skill_issue: 0, cursed: 0 },
     court: { ai_wrong: 0, skill_issue: 0 },
-    author: input.author ?? randomHandle(),
-    authorSessionId: user?.id || undefined,
     hidden: false,
-    ...input,
-    verdict,
   };
 
   posts = [optimisticPost, ...posts];
   persist();
 
-  // background call
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await createPostFn({
-        data: {
+      const res = await apiCall("/api/posts", "POST", {
           title: input.title,
           body: input.body,
           tool: input.tool,
@@ -528,14 +462,9 @@ export function createPost(
           crimeSceneImage: input.crimeSceneImage,
           aiDefenseImage: input.aiDefenseImage,
           recaptchaToken: input.recaptchaToken,
-        }
       });
       if (res && "error" in res) {
         console.error("Failed to save post to database:", res.error);
-        throw new Error(res.error);
-      } else if (res) {
-        posts = posts.map((p) => p.id === id ? (res as Post) : p);
-        persist();
       }
     } catch (err) {
       console.error("Error creating post server side:", err);
@@ -562,9 +491,7 @@ export async function addComment(postId: string, body: string) {
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await createCommentFn({
-        data: { postId, body }
-      });
+      const res = await apiCall("/api/comments", "POST", { postId, body });
       if (res && "error" in res) {
         console.error("Failed to save comment to database:", res.error);
       }
@@ -614,9 +541,7 @@ export async function toggleReaction(postId: string, r: Reaction) {
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await toggleReactionFn({
-        data: { postId, reactionKey: r }
-      });
+      const res = await apiCall("/api/reactions", "POST", { postId, reactionKey: r });
       if (res && "error" in res) {
         console.error("Failed to toggle reaction on database:", res.error);
         // rollback optimistic updates on failure
@@ -657,10 +582,7 @@ export async function setStatus(postId: string, status: Status) {
   );
   persist();
 
-  await supabase
-    .from("posts")
-    .update({ verdict: status === "solved" ? "solved" : "still_broken" })
-    .eq("id", postId);
+  await apiCall("/api/posts/status", "POST", { postId, status });
 }
 
 export async function toggleHidden(postId: string) {
@@ -672,10 +594,7 @@ export async function toggleHidden(postId: string) {
   posts = posts.map((p) => (p.id === postId ? { ...p, hidden: newHidden } : p));
   persist();
 
-  await supabase
-    .from("posts")
-    .update({ hidden: newHidden })
-    .eq("id", postId);
+  await apiCall("/api/posts/hide", "POST", { postId });
 }
 
 export async function deletePost(postId: string) {
@@ -685,7 +604,7 @@ export async function deletePost(postId: string) {
   comments = comments.filter((c) => c.postId !== postId);
   persist();
 
-  await supabase.from("posts").delete().eq("id", postId);
+  await apiCall("/api/posts/delete", "POST", { postId });
 }
 
 export async function updatePost(
@@ -697,23 +616,10 @@ export async function updatePost(
   posts = posts.map((p) => (p.id === postId ? { ...p, ...updates } : p));
   persist();
 
-  const dbUpdates: Record<string, any> = {};
-  if (updates.title !== undefined) dbUpdates.title = updates.title;
-  if (updates.body !== undefined) dbUpdates.body = updates.body;
-  if (updates.tool !== undefined) dbUpdates.tool = updates.tool;
-  if (updates.vibe !== undefined) dbUpdates.vibe = updates.vibe;
-  if (updates.verdict !== undefined) dbUpdates.verdict = updates.verdict;
-  if (updates.plea !== undefined) dbUpdates.plea = updates.plea;
-  if (updates.aiDefense !== undefined) dbUpdates.ai_defense = updates.aiDefense;
-  if (updates.memeUrl !== undefined) dbUpdates.meme_url = updates.memeUrl;
-  if (updates.crimeSceneImage !== undefined) dbUpdates.crime_scene_image = updates.crimeSceneImage;
-  if (updates.aiDefenseImage !== undefined) dbUpdates.ai_defense_image = updates.aiDefenseImage;
-  if (updates.status !== undefined) dbUpdates.verdict = updates.status === "solved" ? "solved" : "still_broken";
-
-  const { error } = await supabase.from("posts").update(dbUpdates).eq("id", postId);
-  if (error) {
-    console.error("Failed to update post in database:", error);
-    throw error;
+  const res = await apiCall("/api/posts/update", "POST", { postId, updates });
+  if (res.error) {
+    console.error("Failed to update post in database:", res.error);
+    throw new Error(res.error);
   }
 }
 
@@ -723,10 +629,10 @@ export async function deleteComment(commentId: string) {
   comments = comments.filter((c) => c.id !== commentId);
   persist();
 
-  const { error } = await supabase.from("comments").delete().eq("id", commentId);
-  if (error) {
-    console.error("Failed to delete comment from database:", error);
-    throw error;
+  const res = await apiCall("/api/comments/delete", "POST", { commentId });
+  if (res.error) {
+    console.error("Failed to delete comment from database:", res.error);
+    throw new Error(res.error);
   }
 }
 
@@ -734,16 +640,10 @@ export async function reportContent(targetType: "post" | "comment", targetId: st
   init();
   await ensureGuestSession();
   
-  const { error } = await supabase.from("reports").insert({
-    reporter_session_id: user?.id || null,
-    target_type: targetType,
-    target_id: targetId,
-    reason: reason,
-  });
-
-  if (error) {
-    console.error("Failed to submit report:", error);
-    throw error;
+  const res = await apiCall("/api/reports", "POST", { targetType, targetId, reason });
+  if (res.error) {
+    console.error("Failed to submit report:", res.error);
+    throw new Error(res.error);
   }
 }
 
@@ -802,10 +702,12 @@ export function toggleLikeComment(commentId: string) {
   localStorage.setItem(LIKED_COMMENTS_KEY, JSON.stringify([...s]));
   persist();
 }
-export function hasLikedComment(commentId: string): boolean {
+export function isCommentLiked(commentId: string): boolean {
   return loadLikedComments().has(commentId);
 }
+export const hasLikedComment = isCommentLiked;
 
+// Secret reaction of the week
 const SECRET_REACTIONS = [
   { emoji: "🥲", key: "humbled" },
   { emoji: "🫨", key: "shaken" },
@@ -815,7 +717,7 @@ const SECRET_REACTIONS = [
   { emoji: "🚬", key: "cigarette_break" },
 ];
 
-export function getActiveSecretReaction() {
+export function getSecretReactionOfTheWeek(): SecretReaction {
   const MS_PER_WEEK = 604800000;
   const TUESDAY_OFFSET = 5 * 24 * 60 * 60 * 1000; // Jan 6, 1970 was a Tuesday
   const now = Date.now();
@@ -865,9 +767,7 @@ export function voteCourt(postId: string, verdict: "ai_wrong" | "skill_issue") {
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await voteCourtFn({
-        data: { postId, verdict }
-      });
+      const res = await apiCall("/api/votes", "POST", { postId, verdict });
       if (res && "error" in res) {
         console.error("Failed to vote court on server:", res.error);
         // rollback
@@ -922,36 +822,28 @@ export function usePosts(options?: { sort?: string; filter?: { tool?: string } }
       };
       return score(b) - score(a);
     });
-  } else if (sort === "new") {
+  } else if (sort === "top") {
+    filtered.sort((a, b) => {
+      const totalA = Object.values(a.reactions).reduce((sum, v) => sum + v, 0);
+      const totalB = Object.values(b.reactions).reduce((sum, v) => sum + v, 0);
+      return totalB - totalA;
+    });
+  } else {
+    // default: newest
     filtered.sort((a, b) => b.createdAt - a.createdAt);
-  } else if (sort === "still_broken") {
-    filtered = filtered.filter((p) => p.verdict === "still_broken");
   }
 
-  const tool = options?.filter?.tool;
-  if (tool) {
-    filtered = filtered.filter((p) => p.tool === tool);
+  if (options?.filter?.tool) {
+    filtered = filtered.filter((p) => p.tool === options.filter!.tool);
   }
 
   return filtered;
 }
 
-export function usePost(id: string) {
-  const { posts, comments } = useStore();
-
-  const post = posts.find((p) => p.id === id) || null;
-  const postComments = comments.filter((c) => c.postId === id);
-
-  const userReactions = Array.from(userReactionsSet)
-    .filter((k) => k.startsWith(`${id}:`))
-    .map((k) => k.split(":")[1]);
-  
-  const userVote = userVotesMap.get(id) || null;
-
-  return {
-    post,
-    comments: postComments,
-    userReactions,
-    userVote,
-  };
+export function useComments(postId: string) {
+  const { comments } = useStore();
+  return comments.filter((c) => c.postId === postId);
 }
+
+// Export apiCall and token helpers for other modules
+export { apiCall, getToken, setToken, clearToken };

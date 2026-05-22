@@ -49,9 +49,6 @@ function Submit() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState("");
   const [remixSeed, setRemixSeed] = useState(0);
-  const recaptchaRef = useRef<HTMLDivElement | null>(null);
-  const recaptchaId = useRef<any>(null);
-
 
   const [successData, setSuccessData] = useState<{
     postId: string;
@@ -78,54 +75,6 @@ function Submit() {
     };
   }, []);
 
-  // Load Google reCAPTCHA Script Dynamically
-  useEffect(() => {
-    if (typeof window !== "undefined" && !document.getElementById("google-recaptcha-script")) {
-      const script = document.createElement("script");
-      script.id = "google-recaptcha-script";
-      script.src = "https://www.google.com/recaptcha/api.js?render=explicit";
-      script.async = true;
-      script.defer = true;
-      document.body.appendChild(script);
-    }
-  }, []);
-
-  // Render Google reCAPTCHA Invisible Widget
-  useEffect(() => {
-    if (typeof window !== "undefined" && !successData) {
-      const interval = setInterval(() => {
-        if ((window as any).grecaptcha && recaptchaRef.current) {
-          clearInterval(interval);
-          try {
-            if (recaptchaRef.current.innerHTML === "") {
-              recaptchaId.current = (window as any).grecaptcha.render(recaptchaRef.current, {
-                sitekey: import.meta.env.VITE_RECAPTCHA_SITE_KEY || "6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI",
-                size: "invisible",
-                callback: (token: string) => {
-                  handleActualSubmit(token);
-                },
-                "expired-callback": () => {
-                  if ((window as any).grecaptcha && recaptchaId.current !== null) {
-                    (window as any).grecaptcha.reset(recaptchaId.current);
-                  }
-                },
-                "error-callback": () => {
-                  if ((window as any).grecaptcha && recaptchaId.current !== null) {
-                    (window as any).grecaptcha.reset(recaptchaId.current);
-                  }
-                }
-              });
-            }
-          } catch (err) {
-            console.error("reCAPTCHA rendering exception:", err);
-          }
-        }
-      }, 100);
-      return () => clearInterval(interval);
-    }
-  }, [successData]);
-
-
   const navItems = [
     { label: "Home", icon: Home, to: "/", search: {} },
     { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
@@ -144,7 +93,7 @@ function Submit() {
     }
   };
 
-  const handleActualSubmit = async (token: string) => {
+  const handleActualSubmit = async () => {
     setIsSubmitting(true);
     setLoadingStatus("POSTING UR FAIL...");
 
@@ -191,7 +140,6 @@ function Submit() {
         aiDefenseImage: aiDefenseImage || undefined,
         language: "Other",
         author: activeHandle,
-        recaptchaToken: token,
       });
 
       clearDraft();
@@ -209,9 +157,6 @@ function Submit() {
       console.error(err);
       const errMsg = err.message || "Failed to submit the confession. Please try again.";
       setErrors([errMsg]);
-      if (typeof window !== "undefined" && (window as any).grecaptcha && recaptchaId.current !== null) {
-        (window as any).grecaptcha.reset(recaptchaId.current);
-      }
     } finally {
       setIsSubmitting(false);
       setLoadingStatus("");
@@ -226,19 +171,7 @@ function Submit() {
       return;
     }
 
-    if (typeof window !== "undefined" && (window as any).grecaptcha && recaptchaId.current !== null) {
-      try {
-        setIsSubmitting(true);
-        setLoadingStatus("LAUNCHING CAPTCHA...");
-        (window as any).grecaptcha.execute(recaptchaId.current);
-      } catch (err) {
-        console.error("reCAPTCHA execution error:", err);
-        setIsSubmitting(false);
-        setErrors(["CAPTCHA failed to launch. Please reload and try again."]);
-      }
-    } else {
-      setErrors(["Security gate is still initializing. Please wait a moment."]);
-    }
+    handleActualSubmit();
   };
 
   const handleRemix = async () => {
@@ -417,8 +350,6 @@ function Submit() {
             />
           </div>
 
-          {/* Programmatic Invisible Security Gate */}
-          <div ref={recaptchaRef} className="hidden" />
 
           {/* Action Row */}
           <div className="border-t border-ink/10 dark:border-zinc-800 pt-5 flex flex-col sm:flex-row gap-3 items-center justify-between">

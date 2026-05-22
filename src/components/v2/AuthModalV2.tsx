@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { X, User, Shield, RefreshCw } from "lucide-react";
-import { supabase } from "@/lib/supabase";
-import { getCuratedUsernameSuggestions, generateRandomUsername } from "@/lib/auth-utils";
+import { getCuratedUsernameSuggestions, generateRandomUsername, loginAsGuest, loginWithCredentials, signupWithCredentials } from "@/lib/auth-utils";
 
 type AuthModalProps = {
   isOpen: boolean;
@@ -86,26 +85,8 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
     setLoading(true);
     setError("");
     try {
-      const generatedUsername = generateRandomUsername();
-      
-      // Sign up with fake email to bypass disabled anonymous providers
-      const fakeEmail = `guest_${generatedUsername.toLowerCase().replace(/[^a-z0-9]/g, '')}_${Math.floor(Math.random() * 10000)}@vibefail.local`;
-      const fakePassword = Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
-
-      const { data, error } = await supabase.auth.signUp({
-        email: fakeEmail,
-        password: fakePassword,
-        options: {
-          data: {
-            username: generatedUsername,
-            is_guest: true
-          }
-        }
-      });
-      
-      if (error) throw error;
-      
-      onLogin({ username: generatedUsername, isGuest: true, id: data.user?.id });
+      const user = await loginAsGuest();
+      onLogin(user);
       onClose();
     } catch (err: any) {
       setError(err.message);
@@ -133,9 +114,6 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
       return;
     }
 
-    const cleanUsername = username.trim();
-    const fakeEmail = `${cleanUsername.toLowerCase().replace(/[^a-z0-9_]/g, "")}@vibefail.local`;
-
     setLoading(true);
 
     try {
@@ -146,78 +124,13 @@ export function AuthModalV2({ isOpen, onClose, onLogin }: AuthModalProps) {
           return;
         }
 
-        // 1. Check if username is already taken
-        const { data: existingProfile, error: checkError } = await supabase
-          .from("profiles")
-          .select("username")
-          .eq("username", cleanUsername)
-          .maybeSingle();
-
-        if (checkError) {
-          console.error("Username check failed", checkError);
-        }
-
-        if (existingProfile) {
-          setError("Username is already taken. Try choosing one of our creative suggestions!");
-          setLoading(false);
-          return;
-        }
-
-        // 2. Perform Supabase Sign Up
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email: fakeEmail,
-          password: password,
-          options: {
-            data: {
-              username: cleanUsername,
-              status: "claimed"
-            }
-          }
-        });
-
-        if (signUpError) throw signUpError;
-
-        onLogin({ 
-          username: cleanUsername, 
-          isGuest: false, 
-          id: signUpData.user?.id 
-        });
+        const user = await signupWithCredentials(username.trim(), password);
+        onLogin(user);
         onClose();
-
       } else {
-        // --- LOG IN FLOW ---
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: fakeEmail,
-          password: password,
-        });
-
-        if (signInError) {
-          if (signInError.message.includes("Invalid login credentials")) {
-            throw new Error("Invalid username or password.");
-          }
-          throw signInError;
-        }
-
-        const { data: profile, error: profileError } = await supabase
-          .from("profiles")
-          .select("*")
-          .eq("id", signInData.user?.id)
-          .maybeSingle();
-
-        if (profileError || !profile) {
-          onLogin({ 
-            username: cleanUsername, 
-            isGuest: false, 
-            id: signInData.user?.id 
-          });
-        } else {
-          onLogin({ 
-            username: profile.username, 
-            isGuest: profile.status === "ghost", 
-            id: signInData.user?.id 
-          });
-        }
-        
+        // Login
+        const user = await loginWithCredentials(username.trim(), password);
+        onLogin(user);
         onClose();
       }
     } catch (err: any) {
