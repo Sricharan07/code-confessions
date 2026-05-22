@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { createPostFn } from "@/server/confess";
+import { supabase } from "@/lib/supabase";
+
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 export function MigrationBanner() {
   const [visible, setVisible] = useState(false);
@@ -54,8 +56,15 @@ export function MigrationBanner() {
           tool = "other";
         }
 
-        await createPostFn({
-          data: {
+        const { data: { session } } = await supabase.auth.getSession();
+        const headers: Record<string, string> = { "Content-Type": "application/json" };
+        if (session?.access_token) {
+          headers["Authorization"] = `Bearer ${session.access_token}`;
+        }
+        const res = await fetch(`${API_URL}/api/posts`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
             title: oldPost.title || "confession from local storage",
             body: oldPost.body || "no body provided in the local history.",
             tool: tool,
@@ -64,8 +73,9 @@ export function MigrationBanner() {
             plea: oldPost.plea || undefined,
             aiDefense: oldPost.aiDefense || undefined,
             memeUrl: oldPost.memeUrl || undefined,
-          }
+          }),
         });
+        await res.json();
       }
 
       setProgress("★ done. ur fails are now public. cope.");

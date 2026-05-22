@@ -1,6 +1,7 @@
 import { supabase } from "./supabase";
 import { setAuthUser } from "./store";
-import { createServerFn } from "@tanstack/react-start";
+
+const API_URL = import.meta.env.VITE_API_URL || "";
 
 const ADJECTIVES = [
   "Cursed", "Caffeinated", "Sleepy", "Buggy", "Janky", 
@@ -35,62 +36,20 @@ export function generateRandomUsername(): string {
   return `${adj}_${noun}_${num}`;
 }
 
-export const generateLlmUsernames = createServerFn({
-  method: "GET",
-})
-  .handler(async () => {
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) {
-      return null;
+async function generateLlmUsernames(): Promise<string[] | null> {
+  try {
+    const res = await fetch(`${API_URL}/api/usernames`);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data) && data.length > 0) {
+        return data;
+      }
     }
-
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  {
-                    text: `Generate exactly 5 highly creative, funny, sarcastic developer-themed usernames in a plain JSON list of strings (e.g. ["BasedIntern_99", "RefactoredSpaghetti_404"]). Do not use markdown backticks or block syntax.`
-                  }
-                ]
-              }
-            ],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
-        }
-      );
-
-      if (!response.ok) {
-        console.warn("Gemini API request failed:", response.statusText);
-        return null;
-      }
-
-      const resData = await response.json();
-      const text = resData?.candidates?.[0]?.content?.parts?.[0]?.text;
-      if (!text) {
-        return null;
-      }
-
-      const usernames = JSON.parse(text.trim());
-      if (Array.isArray(usernames) && usernames.length > 0) {
-        return usernames;
-      }
-      return null;
-    } catch (err) {
-      console.warn("Error calling Gemini API:", err);
-      return null;
-    }
+    return null;
+  } catch {
+    return null;
   }
-);
+}
 
 export async function getCuratedUsernameSuggestions(count = 3): Promise<string[]> {
   try {

@@ -1,11 +1,24 @@
 import { useSyncExternalStore, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import {
-  createPostFn,
-  toggleReactionFn,
-  voteCourtFn,
-  createCommentFn,
-} from "@/server/confess";
+
+const API_URL = import.meta.env.VITE_API_URL || "";
+
+async function apiCall(path: string, method: "GET" | "POST", body?: any) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const headers: Record<string, string> = {};
+  if (session?.access_token) {
+    headers["Authorization"] = `Bearer ${session.access_token}`;
+  }
+  if (method === "POST") {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetch(`${API_URL}${path}`, {
+    method,
+    headers,
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  return res.json();
+}
 
 export type AITool = "cursor" | "chatgpt" | "claude" | "copilot" | "gemini" | "other";
 
@@ -515,8 +528,7 @@ export function createPost(
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await createPostFn({
-        data: {
+      const res = await apiCall("/api/posts", "POST", {
           title: input.title,
           body: input.body,
           tool: input.tool,
@@ -528,7 +540,6 @@ export function createPost(
           crimeSceneImage: input.crimeSceneImage,
           aiDefenseImage: input.aiDefenseImage,
           recaptchaToken: input.recaptchaToken,
-        }
       });
       if (res && "error" in res) {
         console.error("Failed to save post to database:", res.error);
@@ -562,9 +573,7 @@ export async function addComment(postId: string, body: string) {
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await createCommentFn({
-        data: { postId, body }
-      });
+      const res = await apiCall("/api/comments", "POST", { postId, body });
       if (res && "error" in res) {
         console.error("Failed to save comment to database:", res.error);
       }
@@ -614,9 +623,7 @@ export async function toggleReaction(postId: string, r: Reaction) {
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await toggleReactionFn({
-        data: { postId, reactionKey: r }
-      });
+      const res = await apiCall("/api/reactions", "POST", { postId, reactionKey: r });
       if (res && "error" in res) {
         console.error("Failed to toggle reaction on database:", res.error);
         // rollback optimistic updates on failure
@@ -865,9 +872,7 @@ export function voteCourt(postId: string, verdict: "ai_wrong" | "skill_issue") {
   (async () => {
     try {
       await ensureGuestSession();
-      const res = await voteCourtFn({
-        data: { postId, verdict }
-      });
+      const res = await apiCall("/api/votes", "POST", { postId, verdict });
       if (res && "error" in res) {
         console.error("Failed to vote court on server:", res.error);
         // rollback
