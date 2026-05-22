@@ -9,17 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as V2RouteImport } from './routes/v2'
 import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PostIdRouteImport } from './routes/post.$id'
 
-const V2Route = V2RouteImport.update({
-  id: '/v2',
-  path: '/v2',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SubmitRoute = SubmitRouteImport.update({
   id: '/submit',
   path: '/submit',
@@ -45,14 +39,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/submit': typeof SubmitRoute
-  '/v2': typeof V2Route
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/submit': typeof SubmitRoute
-  '/v2': typeof V2Route
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRoutesById {
@@ -60,34 +52,25 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/submit': typeof SubmitRoute
-  '/v2': typeof V2Route
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/submit' | '/v2' | '/post/$id'
+  fullPaths: '/' | '/admin' | '/submit' | '/post/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/submit' | '/v2' | '/post/$id'
-  id: '__root__' | '/' | '/admin' | '/submit' | '/v2' | '/post/$id'
+  to: '/' | '/admin' | '/submit' | '/post/$id'
+  id: '__root__' | '/' | '/admin' | '/submit' | '/post/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   SubmitRoute: typeof SubmitRoute
-  V2Route: typeof V2Route
   PostIdRoute: typeof PostIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/v2': {
-      id: '/v2'
-      path: '/v2'
-      fullPath: '/v2'
-      preLoaderRoute: typeof V2RouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/submit': {
       id: '/submit'
       path: '/submit'
@@ -123,7 +106,6 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   SubmitRoute: SubmitRoute,
-  V2Route: V2Route,
   PostIdRoute: PostIdRoute,
 }
 export const routeTree = rootRouteImport

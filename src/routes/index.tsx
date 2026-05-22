@@ -1,10 +1,24 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
-import { useStore } from "@/lib/store";
-import { PostCard } from "@/components/PostCard";
+import { createFileRoute, Link, useRouter, useSearch } from "@tanstack/react-router";
+import { useState, useEffect } from "react";
+import { SidebarV2 } from "@/components/v2/SidebarV2";
+import { FeedV2 } from "@/components/v2/FeedV2";
+import { useStore, setAuthUser, getAvatarUrl, logout, setTheme, setFeedTab } from "@/lib/store";
+import { AuthModalV2 } from "@/components/v2/AuthModalV2";
+import { Home, TrendingUp, BookOpen, Compass, Bell, User, LogOut, Sun, Moon, Monitor } from "lucide-react";
+
+type IndexSearchParams = {
+  tab?: string;
+  compose?: string;
+};
 
 export const Route = createFileRoute("/")({
-  component: Index,
+  validateSearch: (search: Record<string, unknown>): IndexSearchParams => {
+    return {
+      tab: search.tab as string | undefined,
+      compose: search.compose as string | undefined,
+    };
+  },
+  component: V2Layout,
   head: () => ({
     meta: [
       { title: "VibeFail — Post the worst thing AI did to your code" },
@@ -13,92 +27,289 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-type Sort = "hot" | "new" | "broken";
+function V2Layout() {
+  const [authOpen, setAuthOpen] = useState(false);
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
+  const { posts, user, theme } = useStore();
+  const search = useSearch({ from: "/" }) as any;
+  const activeTab = search.tab || "for-you";
+  const router = useRouter();
 
-function Index() {
-  const { posts } = useStore();
-  const [sort, setSort] = useState<Sort>("hot");
-  const [tool, setTool] = useState<string>("All");
+  useEffect(() => {
+    document.body.classList.add("v2-body");
+    return () => {
+      document.body.classList.remove("v2-body");
+    };
+  }, []);
 
-  const visible = useMemo(() => {
-    let p = posts.filter((x) => !x.hidden);
-    if (tool !== "All") p = p.filter((x) => x.tool === tool);
-    if (sort === "new") p = [...p].sort((a, b) => b.createdAt - a.createdAt);
-    else if (sort === "broken") p = p.filter((x) => x.status === "broken").sort((a, b) => b.createdAt - a.createdAt);
-    else p = [...p].sort((a, b) => {
-      const sa = Object.values(a.reactions).reduce((x, y) => x + y, 0);
-      const sb = Object.values(b.reactions).reduce((x, y) => x + y, 0);
-      return sb - sa;
-    });
-    return p;
-  }, [posts, sort, tool]);
+  const navItems = [
+    { label: "Home", icon: Home, to: "/", search: {} },
+    { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
+    { label: "Following", icon: BookOpen, to: "/", search: { tab: "followers" } },
+    { label: "Explore", icon: Compass, to: "/", search: { tab: "explore" } },
+    { label: "Activity", icon: Bell, to: "/", search: { tab: "activity" } },
+  ];
 
-  const tools = ["All", ...Array.from(new Set(posts.map((p) => p.tool)))];
+  const handleMobileNavClick = (item: any, e: any) => {
+    const requiresAuth = item.label === "Following";
+    const isGuest = user?.isGuest;
+    const isLoggedOut = !user;
+    if (requiresAuth && (isGuest || isLoggedOut)) {
+      e.preventDefault();
+      setAuthOpen(true);
+    }
+  };
+
+  // Sort posts by popularity (overall reactions sum)
+  const popularConfessions = [...posts]
+    .filter((p) => !p.hidden)
+    .sort((a, b) => {
+      const sumA = (Object.values(a.reactions) as number[]).reduce((sum, v) => sum + v, 0);
+      const sumB = (Object.values(b.reactions) as number[]).reduce((sum, v) => sum + v, 0);
+      return sumB - sumA;
+    })
+    .slice(0, 4);
 
   return (
-    <main className="mx-auto max-w-6xl px-4 sm:px-6 pt-10 pb-20">
-      {/* Hero */}
-      <section className="grid md:grid-cols-12 gap-6 mb-12 items-end">
-        <div className="md:col-span-8">
-          <p className="mono text-xs uppercase mb-3 inline-block bg-ink text-paper px-2 py-1">Vol. 01 · Public Wall</p>
-          <h1 className="display text-5xl sm:text-7xl md:text-8xl mb-4">
-            Post the worst thing
-            <br />
-            <span className="bg-hot text-paper px-2">AI did</span> to your code.
-          </h1>
-          <p className="text-base sm:text-lg max-w-xl text-ink/80">
-            No accounts. No karma. No mods (mostly). Just the receipts from when your agent went rogue, your autocomplete grew a soul, and your prod went dark.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link to="/submit" className="brutal-btn">＋ Confess anonymously</Link>
-            <a href="#feed" className="brutal-btn-ghost">↓ Read the wreckage</a>
-          </div>
+    <div className="h-full w-full bg-paper text-ink dark:text-zinc-50 selection:bg-hot/20 font-sans flex flex-col items-center justify-start overflow-hidden relative">
+      
+      {/* Mobile Top Header */}
+      <header className="w-full md:hidden h-14 border-b border-ink/10 flex items-center justify-between px-4 bg-paper shrink-0 z-30 relative">
+        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
+          <span className="font-bold text-[20px] tracking-tight text-ink dark:text-zinc-50">
+            VIBE<span className="bg-ink dark:bg-zinc-50 text-paper dark:text-zinc-950 px-1 ml-0.5 pb-0.5 rounded-sm">FAIL</span>
+          </span>
+        </Link>
+        
+        {/* Profile/Menu trigger */}
+        <div className="relative">
+          {user ? (
+            <img 
+              src={getAvatarUrl(user.username)} 
+              alt="avatar" 
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
+            />
+          ) : (
+            <button 
+              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 border border-ink/10 dark:border-zinc-800 rounded-full flex items-center justify-center text-ink/60 dark:text-zinc-400 cursor-pointer"
+            >
+              <User className="w-4 h-4 stroke-[2px]" />
+            </button>
+          )}
+
+          {profileMenuOpen && (
+            <>
+              {/* Invisible Click-Outside Backdrop */}
+              <div 
+                className="fixed inset-0 z-40 cursor-default" 
+                onClick={() => setProfileMenuOpen(false)}
+              />
+              
+              {/* Floating Profile Popover */}
+              <div className="absolute right-0 top-10 w-60 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
+                {/* Theme Selector */}
+                <div className="px-1 py-1">
+                  <div className="text-[10px] text-muted-foreground dark:text-zinc-500 font-extrabold mb-2 uppercase tracking-widest">Theme</div>
+                  <div className="grid grid-cols-3 gap-1 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
+                    {[
+                      { key: "light", label: "Light", icon: Sun },
+                      { key: "dark", label: "Dark", icon: Moon },
+                      { key: "system", label: "System", icon: Monitor },
+                    ].map((t) => {
+                      const Icon = t.icon;
+                      const isActive = theme === t.key;
+                      return (
+                        <button
+                          key={t.key}
+                          onClick={() => setTheme(t.key as any)}
+                          className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all gap-1 cursor-pointer ${
+                            isActive
+                              ? "bg-white dark:bg-zinc-800 text-hot dark:text-zinc-50 shadow-sm border border-zinc-200/40 dark:border-zinc-700/50"
+                              : "text-muted-foreground hover:text-ink dark:hover:text-zinc-200"
+                          }`}
+                        >
+                          <Icon className="w-4 h-4" />
+                          <span className="text-[9px] font-bold tracking-wide uppercase">{t.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
+
+                {user && !user.isGuest ? (
+                  <>
+                    <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
+                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.username}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">@{user.username}</div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        setFeedTab("my-posts");
+                        router.navigate({ to: "/", search: { tab: "my-posts" } as any });
+                      }}
+                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                    >
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span>My Fails</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        setAuthOpen(true);
+                      }}
+                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                    >
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span>Log In / Sign Up</span>
+                    </button>
+                  </>
+                )}
+
+                {user && !user.isGuest && (
+                  <>
+                    <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        logout();
+                      }}
+                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-left text-[14px] font-bold transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Log Out</span>
+                    </button>
+                  </>
+                )}
+              </div>
+            </>
+          )}
         </div>
-        <aside className="md:col-span-4 brutal-card p-5">
-          <p className="mono text-xs uppercase mb-2">— Today on the wall</p>
-          <div className="space-y-2 mono text-sm">
-            <div className="flex justify-between"><span>Confessions</span><span className="font-bold">{posts.length}</span></div>
-            <div className="flex justify-between"><span>Still broken</span><span className="font-bold text-hot">{posts.filter(p => p.status === "broken").length}</span></div>
-            <div className="flex justify-between"><span>Solved</span><span className="font-bold">{posts.filter(p => p.status === "solved").length}</span></div>
-            <div className="flex justify-between"><span>Reactions</span><span className="font-bold">{posts.reduce((s, p) => s + Object.values(p.reactions).reduce((a, b) => a + b, 0), 0)}</span></div>
-          </div>
-          <div className="mt-4 border-t-2 border-ink pt-3 mono text-xs">
-            "I have seen things you people wouldn't believe. <span className="bg-volt px-1">Tabs on fire</span> off the shoulder of Vercel."
+      </header>
+
+      <div className="w-full max-w-[1440px] flex flex-1 flex-row h-full overflow-hidden justify-center">
+        {/* Left Sidebar - Desktop (hidden on mobile) */}
+        <aside className="hidden md:flex w-[310px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
+          <SidebarV2 />
+        </aside>
+
+        {/* Main Feed Column */}
+        <main className="flex-1 w-full max-w-[760px] border-r border-ink/10 h-full overflow-y-auto pb-20 md:pb-0">
+          <FeedV2 />
+        </main>
+        
+        {/* Right Column for large screens (Substack style) */}
+        <aside className="hidden lg:block w-[365px] shrink-0 h-full overflow-y-auto p-6 pl-8">
+          {(!user || user.isGuest) && (
+            <div className="bg-white dark:bg-zinc-950 border border-ink/5 dark:border-zinc-800/80 rounded-2xl p-6 text-center mb-8 shadow-sm">
+              {/* Stack crest symbol */}
+              <div className="w-10 h-10 bg-hot mx-auto mb-4 flex flex-col justify-between p-1.5 rounded-sm shadow-sm shrink-0">
+                <div className="h-1 bg-paper w-full rounded-sm" />
+                <div className="h-1 bg-paper w-[80%] rounded-sm" />
+                <div className="h-1 bg-paper w-[60%] rounded-sm" />
+              </div>
+              <p className="font-extrabold text-[17px] mb-2 text-ink dark:text-zinc-50 leading-tight">Log in or sign up</p>
+              <p className="text-muted-foreground text-xs leading-relaxed mb-5">
+                Join the most chaotic and hilarious developer community. Share receipts, read code disasters, and feel less alone.
+              </p>
+              <button 
+                onClick={() => setAuthOpen(true)}
+                className="w-full py-2 bg-hot hover:bg-hot/90 text-paper font-bold text-xs rounded-full transition-colors mb-2.5 shadow-sm uppercase tracking-wider"
+              >
+                Start Confessing
+              </button>
+              <button 
+                onClick={() => setAuthOpen(true)}
+                className="w-full py-2 bg-ink dark:bg-zinc-800 text-paper dark:text-zinc-100 hover:opacity-90 font-bold text-xs rounded-full transition-colors border border-ink/10 uppercase tracking-wider"
+              >
+                Sign In
+              </button>
+            </div>
+          )}
+
+          {/* Substack "Up next" layout for Popular Confessions */}
+          <div className="p-1">
+            <h3 className="font-bold text-[12px] mb-4 text-muted-foreground uppercase tracking-widest border-b border-ink/5 dark:border-zinc-800/80 pb-2">Popular Confessions</h3>
+            <div className="space-y-5">
+              {popularConfessions.map((post) => {
+                const totalReactions = Object.values(post.reactions).reduce((a, b) => a + b, 0);
+                return (
+                  <Link 
+                    key={post.id} 
+                    to="/post/$id" 
+                    params={{ id: post.id }} 
+                    className="group block text-left"
+                  >
+                    <div className="flex flex-col gap-1.5">
+                      {/* Publication Meta (Author + Tool) */}
+                      <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider">
+                        <span className="text-hot">@{post.author}</span>
+                        <span>·</span>
+                        <span>{post.tool}</span>
+                      </div>
+                      
+                      {/* Flex layout for Title and Thumbnail avatar */}
+                      <div className="flex justify-between items-start gap-3">
+                        <div className="flex-1">
+                          <p className="font-bold text-[14px] text-ink dark:text-zinc-100 group-hover:text-hot leading-snug line-clamp-2 transition-colors">
+                            {post.title}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                            <span>🔥 {totalReactions} reactions</span>
+                            <span>·</span>
+                            <span className="capitalize">{post.status}</span>
+                          </div>
+                        </div>
+                        
+                        {/* Right aligned avatar thumbnail */}
+                        <img 
+                          src={getAvatarUrl(post.author)} 
+                          alt={post.author} 
+                          className="w-10 h-10 bg-ink/5 dark:bg-zinc-800 rounded-lg border border-ink/5 dark:border-zinc-800 shrink-0 object-cover"
+                        />
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </aside>
-      </section>
-
-      {/* Filters */}
-      <div id="feed" className="flex flex-wrap items-center justify-between gap-3 mb-6 border-y-2 border-ink py-3">
-        <div className="flex gap-2">
-          {(["hot", "new", "broken"] as Sort[]).map((s) => (
-            <button key={s} onClick={() => setSort(s)}
-              className={`mono text-xs font-bold uppercase px-3 py-1 border-2 border-ink ${sort === s ? "bg-ink text-paper" : "bg-paper"}`}>
-              {s === "hot" ? "🔥 Hot" : s === "new" ? "⌁ New" : "★ Still Broken"}
-            </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="mono text-xs uppercase">Filter:</span>
-          <select value={tool} onChange={(e) => setTool(e.target.value)}
-            className="brutal-border bg-paper mono text-xs uppercase font-bold px-2 py-1">
-            {tools.map((t) => <option key={t}>{t}</option>)}
-          </select>
-        </div>
       </div>
 
-      {/* Feed */}
-      <div className="grid md:grid-cols-2 gap-6">
-        {visible.map((p, i) => <PostCard key={p.id} post={p} rank={sort === "hot" ? i + 1 : undefined} />)}
+      {/* Mobile Bottom Navigation Bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-paper/95 backdrop-blur-md border-t border-ink/10 flex items-center justify-around z-30 px-2 shadow-lg">
+        {navItems.map((item) => {
+          const isActive = 
+            (item.label === "Home" && (activeTab === "for-you" || !search.tab)) ||
+            (item.label === "Popular" && activeTab === "popular") ||
+            (item.label === "Following" && activeTab === "followers") ||
+            (item.label === "Explore" && activeTab === "explore") ||
+            (item.label === "Activity" && activeTab === "activity");
+
+          return (
+            <Link
+              key={item.label}
+              to={item.to}
+              search={item.search as any}
+              onClick={(e) => handleMobileNavClick(item, e)}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-ink dark:text-zinc-200 cursor-pointer"
+            >
+              <item.icon className={`w-5.5 h-5.5 transition-all ${isActive ? "stroke-[2.5px] text-hot scale-110" : "stroke-[1.5px] text-muted-foreground"}`} />
+              <span className={`text-[10px] mt-0.5 transition-all ${isActive ? "font-bold text-hot" : "font-medium text-muted-foreground"}`}>{item.label}</span>
+            </Link>
+          );
+        })}
       </div>
 
-      {visible.length === 0 && (
-        <div className="brutal-card p-10 text-center">
-          <p className="display text-3xl mb-2">No fails. Yet.</p>
-          <p className="mono text-sm mb-4">Suspicious. Be the first to confess.</p>
-          <Link to="/submit" className="brutal-btn">＋ Confess</Link>
-        </div>
-      )}
-    </main>
+      <AuthModalV2 isOpen={authOpen} onClose={() => setAuthOpen(false)} onLogin={setAuthUser} />
+    </div>
   );
 }

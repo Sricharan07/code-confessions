@@ -15,13 +15,13 @@ function Submit() {
   const [language, setLanguage] = useState("TypeScript");
   const [err, setErr] = useState("");
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     const t = title.trim();
     const b = body.trim();
     if (t.length < 10 || t.length > 140) return setErr("Title: 10–140 characters.");
     if (b.length < 20 || b.length > 2000) return setErr("Story: 20–2000 characters.");
-    const post = createPost({ title: t, body: b, tool, language: language.trim().slice(0, 40) || "Other" });
+    const post = await createPost({ title: t, body: b, tool, language: language.trim().slice(0, 40) || "Other" });
     nav({ to: "/post/$id", params: { id: post.id } });
   };
 

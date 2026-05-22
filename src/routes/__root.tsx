@@ -7,6 +7,8 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
+import { useEffect } from "react";
+import { useStore } from "@/lib/store";
 
 import appCss from "../styles.css?url";
 import { Header } from "@/components/Header";
@@ -111,12 +113,40 @@ function RootShell({ children }: { children: React.ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
-  const isV2 = router.state.location.pathname.startsWith('/v2');
+  const { theme } = useStore();
+  const isV2 = router.state.location.pathname === '/';
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const root = window.document.documentElement;
+    
+    const applyTheme = (currentTheme: string) => {
+      if (
+        currentTheme === "dark" || 
+        (currentTheme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
+      ) {
+        root.classList.add("dark");
+      } else {
+        root.classList.remove("dark");
+      }
+    };
+
+    applyTheme(theme);
+
+    if (theme === "system") {
+      const media = window.matchMedia("(prefers-color-scheme: dark)");
+      const listener = (e: MediaQueryListEvent) => {
+        applyTheme(e.matches ? "dark" : "light");
+      };
+      media.addEventListener("change", listener);
+      return () => media.removeEventListener("change", listener);
+    }
+  }, [theme]);
 
   if (isV2) {
     return (
       <QueryClientProvider client={queryClient}>
-        <div className="flex flex-col h-screen overflow-hidden">
+        <div className="flex flex-col h-dvh overflow-hidden">
           <Header />
           <div className="flex-1 overflow-hidden">
             <Outlet />
