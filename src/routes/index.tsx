@@ -1,24 +1,10 @@
-import { createFileRoute, Link, useRouter, useSearch } from "@tanstack/react-router";
-import { useState, useEffect } from "react";
-import { SidebarV2 } from "@/components/v2/SidebarV2";
-import { FeedV2 } from "@/components/v2/FeedV2";
-import { useStore, setAuthUser, getAvatarUrl, logout, setTheme, setFeedTab } from "@/lib/store";
-import { AuthModalV2 } from "@/components/v2/AuthModalV2";
-import { Home, TrendingUp, BookOpen, Compass, Bell, User, LogOut, Sun, Moon, Monitor } from "lucide-react";
-
-type IndexSearchParams = {
-  tab?: string;
-  compose?: string;
-};
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { useStore, getAvatarUrl } from "@/lib/store";
+import { ArrowRight } from "lucide-react";
 
 export const Route = createFileRoute("/")({
-  validateSearch: (search: Record<string, unknown>): IndexSearchParams => {
-    return {
-      tab: search.tab as string | undefined,
-      compose: search.compose as string | undefined,
-    };
-  },
-  component: V2Layout,
+  component: Index,
   head: () => ({
     meta: [
       { title: "VibeFail — Post the worst thing AI did to your code" },
@@ -27,289 +13,148 @@ export const Route = createFileRoute("/")({
   }),
 });
 
-function V2Layout() {
-  const [authOpen, setAuthOpen] = useState(false);
-  const [profileMenuOpen, setProfileMenuOpen] = useState(false);
-  const { posts, user, theme } = useStore();
-  const search = useSearch({ from: "/" }) as any;
-  const activeTab = search.tab || "for-you";
-  const router = useRouter();
+function Index() {
+  const { posts } = useStore();
 
-  useEffect(() => {
-    document.body.classList.add("v2-body");
-    return () => {
-      document.body.classList.remove("v2-body");
-    };
-  }, []);
+  // Curate 3 most popular confessions to showcase as featured disasters
+  const featuredDisasters = useMemo(() => {
+    return [...posts]
+      .filter((p) => !p.hidden)
+      .sort((a, b) => {
+        const sumA = Object.values(a.reactions).reduce((sum, v) => sum + v, 0);
+        const sumB = Object.values(b.reactions).reduce((sum, v) => sum + v, 0);
+        return sumB - sumA;
+      })
+      .slice(0, 3);
+  }, [posts]);
 
-  const navItems = [
-    { label: "Home", icon: Home, to: "/", search: {} },
-    { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
-    { label: "Following", icon: BookOpen, to: "/", search: { tab: "followers" } },
-    { label: "Explore", icon: Compass, to: "/", search: { tab: "explore" } },
-    { label: "Activity", icon: Bell, to: "/", search: { tab: "activity" } },
-  ];
-
-  const handleMobileNavClick = (item: any, e: any) => {
-    const requiresAuth = item.label === "Following";
-    const isGuest = user?.isGuest;
-    const isLoggedOut = !user;
-    if (requiresAuth && (isGuest || isLoggedOut)) {
-      e.preventDefault();
-      setAuthOpen(true);
-    }
+  const getToolDisplayName = (tool: string) => {
+    const t = tool.toLowerCase();
+    if (t === "chatgpt") return "Codex";
+    if (t === "claude") return "Claude Code";
+    if (t === "gemini") return "Antigravity";
+    return tool.charAt(0).toUpperCase() + tool.slice(1);
   };
 
-  // Sort posts by popularity (overall reactions sum)
-  const popularConfessions = [...posts]
-    .filter((p) => !p.hidden)
-    .sort((a, b) => {
-      const sumA = (Object.values(a.reactions) as number[]).reduce((sum, v) => sum + v, 0);
-      const sumB = (Object.values(b.reactions) as number[]).reduce((sum, v) => sum + v, 0);
-      return sumB - sumA;
-    })
-    .slice(0, 4);
+  const getToolBadgeStyle = (_tool: string) => {
+    return "bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]";
+  };
 
   return (
-    <div className="h-full w-full bg-paper text-ink dark:text-zinc-50 selection:bg-hot/20 font-sans flex flex-col items-center justify-start overflow-hidden relative">
+    <main className="mx-auto max-w-4xl px-4 sm:px-6 pt-16 pb-24 text-left font-sans">
       
-      {/* Mobile Top Header */}
-      <header className="w-full md:hidden h-14 border-b border-ink/10 flex items-center justify-between px-4 bg-paper shrink-0 z-30 relative">
-        <Link to="/" className="flex items-center hover:opacity-80 transition-opacity">
-          <span className="font-bold text-[20px] tracking-tight text-ink dark:text-zinc-50">
-            VIBE<span className="bg-ink dark:bg-zinc-50 text-paper dark:text-zinc-950 px-1 ml-0.5 pb-0.5 rounded-sm">FAIL</span>
-          </span>
-        </Link>
-        
-        {/* Profile/Menu trigger */}
-        <div className="relative">
-          {user ? (
-            <img 
-              src={getAvatarUrl(user.username)} 
-              alt="avatar" 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
-            />
-          ) : (
-            <button 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 border border-ink/10 dark:border-zinc-800 rounded-full flex items-center justify-center text-ink/60 dark:text-zinc-400 cursor-pointer"
-            >
-              <User className="w-4 h-4 stroke-[2px]" />
-            </button>
-          )}
-
-          {profileMenuOpen && (
-            <>
-              {/* Invisible Click-Outside Backdrop */}
-              <div 
-                className="fixed inset-0 z-40 cursor-default" 
-                onClick={() => setProfileMenuOpen(false)}
-              />
-              
-              {/* Floating Profile Popover */}
-              <div className="absolute right-0 top-10 w-60 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
-                {/* Theme Selector */}
-                <div className="px-1 py-1">
-                  <div className="text-[10px] text-muted-foreground dark:text-zinc-500 font-extrabold mb-2 uppercase tracking-widest">Theme</div>
-                  <div className="grid grid-cols-3 gap-1 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
-                    {[
-                      { key: "light", label: "Light", icon: Sun },
-                      { key: "dark", label: "Dark", icon: Moon },
-                      { key: "system", label: "System", icon: Monitor },
-                    ].map((t) => {
-                      const Icon = t.icon;
-                      const isActive = theme === t.key;
-                      return (
-                        <button
-                          key={t.key}
-                          onClick={() => setTheme(t.key as any)}
-                          className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all gap-1 cursor-pointer ${
-                            isActive
-                              ? "bg-white dark:bg-zinc-800 text-hot dark:text-zinc-50 shadow-sm border border-zinc-200/40 dark:border-zinc-700/50"
-                              : "text-muted-foreground hover:text-ink dark:hover:text-zinc-200"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="text-[9px] font-bold tracking-wide uppercase">{t.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
-
-                {user && !user.isGuest ? (
-                  <>
-                    <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
-                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.username}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">@{user.username}</div>
-                    </div>
-                    <button
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        setFeedTab("my-posts");
-                        router.navigate({ to: "/", search: { tab: "my-posts" } as any });
-                      }}
-                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
-                    >
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>My Fails</span>
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        setAuthOpen(true);
-                      }}
-                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
-                    >
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>Log In / Sign Up</span>
-                    </button>
-                  </>
-                )}
-
-                {user && !user.isGuest && (
-                  <>
-                    <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
-                    <button
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        logout();
-                      }}
-                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-left text-[14px] font-bold transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Log Out</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
+      {/* Left-Aligned Hero Section */}
+      <section className="space-y-6 max-w-3xl mb-20 text-left">
+        <span className="mono text-[10px] uppercase font-bold tracking-wider inline-block bg-ink dark:bg-zinc-100 text-paper dark:text-zinc-950 px-2.5 py-1 rounded-sm select-none">
+          Vol. 01 · Public Wall
+        </span>
+        <h1 className="font-black text-4xl sm:text-6xl md:text-7xl text-ink dark:text-zinc-50 uppercase tracking-tight leading-[1.05]">
+          Post the worst thing
+          <br />
+          <span className="bg-hot text-paper px-3 inline-block transform -rotate-1 skew-x-1 mt-1.5 rounded-sm pb-1 leading-snug">AI did</span> to your code.
+        </h1>
+        <p className="text-[15px] sm:text-[16px] leading-relaxed text-ink/75 dark:text-zinc-355 max-w-xl font-normal">
+          Welcome to the most chaotic and therapeutic wall of AI-coding disasters. No logins. No karma. Just the receipts from when your autocomplete went rogue, your agent hallucinated database tables, and your production went dark.
+        </p>
+        <div className="flex flex-wrap gap-4 pt-2 justify-start">
+          <Link 
+            to="/feed" 
+            className="px-6 py-3.5 bg-hot hover:bg-hot/95 text-white font-extrabold text-xs rounded-full transition-all uppercase tracking-wider shadow-sm flex items-center gap-2 cursor-pointer"
+          >
+            <span>Explore</span>
+            <ArrowRight className="w-4 h-4" />
+          </Link>
         </div>
-      </header>
+      </section>
 
-      <div className="w-full max-w-[1440px] flex flex-1 flex-row h-full overflow-hidden justify-center">
-        {/* Left Sidebar - Desktop (hidden on mobile) */}
-        <aside className="hidden md:flex w-[310px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
-          <SidebarV2 />
-        </aside>
-
-        {/* Main Feed Column */}
-        <main className="flex-1 w-full max-w-[850px] border-r border-ink/10 h-full overflow-y-auto pb-20 md:pb-0">
-          <FeedV2 />
-        </main>
-        
-        {/* Right Column for large screens (Substack style) */}
-        <aside className="hidden lg:block w-[365px] shrink-0 h-full overflow-y-auto p-6 pl-8">
-          {(!user || user.isGuest) && (
-            <div className="bg-white dark:bg-zinc-950 border border-ink/5 dark:border-zinc-800/80 rounded-2xl p-6 text-center mb-8 shadow-sm">
-              {/* Stack crest symbol */}
-              <div className="w-10 h-10 bg-hot mx-auto mb-4 flex flex-col justify-between p-1.5 rounded-sm shadow-sm shrink-0">
-                <div className="h-1 bg-paper w-full rounded-sm" />
-                <div className="h-1 bg-paper w-[80%] rounded-sm" />
-                <div className="h-1 bg-paper w-[60%] rounded-sm" />
-              </div>
-              <p className="font-extrabold text-[17px] mb-2 text-ink dark:text-zinc-50 leading-tight">Log in or sign up</p>
-              <p className="text-muted-foreground text-xs leading-relaxed mb-5">
-                Join the most chaotic and hilarious developer community. Share receipts, read code disasters, and feel less alone.
-              </p>
-              <Link 
-                to="/submit"
-                className="block w-full py-2 bg-hot hover:bg-hot/90 text-paper font-bold text-xs rounded-full transition-colors mb-2.5 shadow-sm uppercase tracking-wider text-center cursor-pointer"
-              >
-                Start Confessing
-              </Link>
-              <button 
-                onClick={() => setAuthOpen(true)}
-                className="w-full py-2 bg-ink dark:bg-zinc-800 text-paper dark:text-zinc-100 hover:opacity-90 font-bold text-xs rounded-full transition-colors border border-ink/10 uppercase tracking-wider"
-              >
-                Sign In
-              </button>
-            </div>
-          )}
-
-          {/* Substack "Up next" layout for Popular Confessions */}
-          <div className="p-1">
-            <h3 className="font-bold text-[12px] mb-4 text-muted-foreground uppercase tracking-widest border-b border-ink/5 dark:border-zinc-800/80 pb-2">Popular Confessions</h3>
-            <div className="space-y-5">
-              {popularConfessions.map((post) => {
-                const totalReactions = Object.values(post.reactions).reduce((a, b) => a + b, 0);
-                return (
-                  <Link 
-                    key={post.id} 
-                    to="/post/$id" 
-                    params={{ id: post.id }} 
-                    className="group block text-left"
-                  >
-                    <div className="flex flex-col gap-1.5">
-                      {/* Publication Meta (Author + Tool) */}
-                      <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider">
-                        <span className="text-hot">@{post.author}</span>
-                        <span>·</span>
-                        <span>{post.tool}</span>
-                      </div>
-                      
-                      {/* Flex layout for Title and Thumbnail avatar */}
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex-1">
-                          <p className="font-bold text-[14px] text-ink dark:text-zinc-100 group-hover:text-hot leading-snug line-clamp-2 transition-colors">
-                            {post.title}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-                            <span>🔥 {totalReactions} reactions</span>
-                            <span>·</span>
-                            <span className="capitalize">{post.status}</span>
-                          </div>
-                        </div>
-                        
-                        {/* Right aligned avatar thumbnail */}
-                        <img 
-                          src={getAvatarUrl(post.author)} 
-                          alt={post.author} 
-                          className="w-10 h-10 bg-ink/5 dark:bg-zinc-800 rounded-lg border border-ink/5 dark:border-zinc-800 shrink-0 object-cover"
-                        />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </aside>
-      </div>
-
-      {/* Mobile Bottom Navigation Bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-paper/95 backdrop-blur-md border-t border-ink/10 flex items-center justify-around z-30 px-2 shadow-lg">
-        {navItems.map((item) => {
-          const isActive = 
-            (item.label === "Home" && (activeTab === "for-you" || !search.tab)) ||
-            (item.label === "Popular" && activeTab === "popular") ||
-            (item.label === "Following" && activeTab === "followers") ||
-            (item.label === "Explore" && activeTab === "explore") ||
-            (item.label === "Activity" && activeTab === "activity");
-
-          return (
-            <Link
-              key={item.label}
-              to={item.to}
-              search={item.search as any}
-              onClick={(e) => handleMobileNavClick(item, e)}
-              className="flex flex-col items-center justify-center flex-1 py-1 text-ink dark:text-zinc-200 cursor-pointer"
+      {/* Featured Disasters Showcase */}
+      {featuredDisasters.length > 0 && (
+        <section className="mb-20">
+          <div className="flex items-center gap-3 mb-8 border-b border-zinc-200 dark:border-zinc-800 pb-4 flex-wrap justify-between">
+            <h2 className="font-black text-2xl sm:text-3xl text-ink dark:text-zinc-50 uppercase tracking-tight">
+              Featured Disasters
+            </h2>
+            <Link 
+              to="/feed" 
+              className="text-[11px] uppercase font-extrabold tracking-wider hover:text-hot transition-colors flex items-center gap-1.5 text-muted-foreground"
             >
-              <item.icon className={`w-5.5 h-5.5 transition-all ${isActive ? "stroke-[2.5px] text-hot scale-110" : "stroke-[1.5px] text-muted-foreground"}`} />
-              <span className={`text-[10px] mt-0.5 transition-all ${isActive ? "font-bold text-hot" : "font-medium text-muted-foreground"}`}>{item.label}</span>
+              <span>Explore all wreckage</span>
+              <ArrowRight className="w-3.5 h-3.5" />
             </Link>
-          );
-        })}
+          </div>
+          <div className="grid md:grid-cols-3 gap-6">
+            {featuredDisasters.map((post) => {
+              const reactionsSum = Object.values(post.reactions).reduce((sum, val) => sum + val, 0);
+              return (
+                <Link 
+                  key={post.id}
+                  to="/feed"
+                  search={{ post: post.id }}
+                  className="group bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between hover:-translate-y-0.5 duration-200 relative h-full text-left"
+                >
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between gap-1.5 flex-wrap">
+                      <span className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border ${getToolBadgeStyle(post.tool)}`}>
+                        {getToolDisplayName(post.tool)}
+                      </span>
+                      <span className={`text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border ${getToolBadgeStyle(post.tool)}`}>
+                        {post.status === "broken" ? "Still Broken" : "Solved"}
+                      </span>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h3 className="font-bold text-lg text-ink dark:text-zinc-150 group-hover:text-hot transition-colors line-clamp-2 leading-snug">
+                        {post.title}
+                      </h3>
+                      <p className="text-xs text-ink/75 dark:text-zinc-355 line-clamp-4 leading-relaxed font-sans font-normal">
+                        {post.body}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 border-t border-zinc-100 dark:border-zinc-850 pt-4 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <img 
+                        src={getAvatarUrl(post.author)} 
+                        alt="avatar" 
+                        className="w-6 h-6 rounded-full bg-zinc-50 border border-zinc-200 dark:border-zinc-800 shrink-0 object-cover" 
+                      />
+                      <span className="text-[11px] font-bold text-muted-foreground truncate">@{post.author}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-hot shrink-0 whitespace-nowrap bg-hot/5 px-2 py-0.5 rounded-full border border-hot/10">{reactionsSum} reactions</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* Bottom Sticky CTA Card */}
+      <div className="text-left bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 p-8 rounded-2xl shadow-sm relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-hot/5 rounded-full filter blur-2xl pointer-events-none" />
+        <h3 className="font-black text-2xl sm:text-3xl text-ink dark:text-zinc-50 uppercase tracking-tight mb-3">
+          Did AI recently nuke your codebase?
+        </h3>
+        <p className="text-xs sm:text-sm max-w-lg text-ink/70 dark:text-zinc-355 mb-6 font-sans font-normal">
+          Don't suffer in silence. Join thousands of other developers sharing their tragic receipts to heal together in absolute anonymity.
+        </p>
+        <div className="flex justify-start gap-4 flex-wrap">
+          <Link 
+            to="/submit" 
+            className="px-6 py-3.5 bg-hot hover:bg-hot/95 text-white font-extrabold text-xs rounded-full transition-all uppercase tracking-wider shadow-sm flex items-center gap-2 cursor-pointer"
+          >
+            Confess
+          </Link>
+          <Link 
+            to="/feed" 
+            className="px-6 py-3.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-850 text-ink dark:text-zinc-200 font-extrabold text-xs rounded-full transition-all uppercase tracking-wider text-center cursor-pointer shadow-xs"
+          >
+            Explore
+          </Link>
+        </div>
       </div>
 
-      <AuthModalV2 isOpen={authOpen} onClose={() => setAuthOpen(false)} onLogin={setAuthUser} />
-    </div>
+    </main>
   );
 }

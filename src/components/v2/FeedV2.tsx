@@ -1,21 +1,25 @@
-import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent } from "@/lib/store";
+import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent, vetContent } from "@/lib/store";
 import { timeAgo } from "@/lib/store";
-import { useRouter, useSearch } from "@tanstack/react-router";
-import { useState } from "react";
-import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2 } from "lucide-react";
+import { Link, useRouter, useSearch } from "@tanstack/react-router";
+import { useState, useEffect, useMemo } from "react";
+import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2, ArrowLeft } from "lucide-react";
 
 export function FeedV2() {
   const { posts, comments, user } = useStore();
   const router = useRouter();
   
   // Parse search query parameters reactively
-  const search = useSearch({ from: "/" }) as any;
+  const search = useSearch({ strict: false }) as any;
   const activeTab = search.tab || "for-you";
+  const postCount = useMemo(() => {
+    if (!search.user) return 0;
+    return posts.filter((p) => p.author.toLowerCase() === search.user.toLowerCase() && !p.hidden).length;
+  }, [search.user, posts]);
 
   // State for Explore tab
   const [searchQuery, setSearchQuery] = useState("");
   const [exploreSubTab, setExploreSubTab] = useState("for-you");
-  const [followedAccounts, setFollowedAccounts] = useState<string[]>(["@vibecoder_9000"]);
+  const [followedAccounts, setFollowedAccounts] = useState<string[]>([]);
   const [followingSubTab, setFollowingSubTab] = useState<"following" | "followers">("following");
 
   // Mock Notification logs for the Activity tab
@@ -59,48 +63,19 @@ export function FeedV2() {
     },
   ];
 
-  // Famous mock follow suggestions for the Explore view
-  const mockFollowSuggestions = [
-    {
-      name: "Hardcoded_ProdCrash_6982",
-      handle: "@Hardcoded_ProdCrash_6982",
-      bio: "React dev who let Gemini refactor my state engine. 400 lines of hallucinated packages. It still hurts.",
-    },
-    {
-      name: "VibeCoder_9000",
-      handle: "@vibecoder_9000",
-      bio: "I don't write code, I just review what Claude writes. 10x velocity, 100x bug density. Shipped to prod anyway.",
-    },
-    {
-      name: "gpt_hallucinations_guru",
-      handle: "@gpt_guru",
-      bio: "Proud author of react-zen-forms@2.4.1 (doesn't exist, hallucinated entirely).",
-    }
-  ];
-
-  // Mock list of followers who follow the logged-in user
-  const mockFollowersList = [
-    {
-      name: "SeniorLlama",
-      handle: "@SeniorLlama",
-      bio: "Self-improving AI researcher. I run local LLMs that compile Rust code.",
-    },
-    {
-      name: "anon-aa11",
-      handle: "@anon-aa11",
-      bio: "Full stack developer. Spent 4 hours debugging a CORS error only to realize the server was offline.",
-    },
-    {
-      name: "Hardcoded_ProdCrash_6982",
-      handle: "@Hardcoded_ProdCrash_6982",
-      bio: "React dev who let Gemini refactor my state engine. 400 lines of hallucinated packages.",
-    }
-  ];
+  // Follow suggestions and followers are dynamically clean
+  const mockFollowSuggestions: any[] = [];
+  const mockFollowersList: any[] = [];
 
   // Filter posts based on activeTab
   const visible = posts
     .filter((p) => {
       if (p.hidden) return false;
+
+      // Filter by clicked user search parameter if present
+      if (search.user && p.author.toLowerCase() !== search.user.toLowerCase()) {
+        return false;
+      }
       
       if (activeTab === "following") {
         return followedAccounts.some(
@@ -110,6 +85,10 @@ export function FeedV2() {
       
       if (activeTab === "my-posts") {
         return user && p.author === user.username;
+      }
+
+      if (activeTab === "saved-posts") {
+        return isPostSaved(p.id);
       }
 
       if (activeTab === "popular") {
@@ -129,6 +108,17 @@ export function FeedV2() {
       return b.createdAt - a.createdAt; 
     });
 
+  const highlightedPost = useMemo(() => {
+    if (!search.post) return null;
+    return posts.find((p) => p.id === search.post) || null;
+  }, [search.post, posts]);
+
+  const finalFeedPosts = useMemo(() => {
+    if (!highlightedPost) return visible;
+    const filtered = visible.filter((p) => p.id !== highlightedPost.id);
+    return [highlightedPost, ...filtered];
+  }, [visible, highlightedPost]);
+
   // Filter explore posts by search query (keyword OR username) or exploreSubTab curations
   const explorePosts = posts
     .filter((p) => {
@@ -137,9 +127,16 @@ export function FeedV2() {
       // Filter by search query if user is actively searching
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase().trim();
-        const matchesKeyword = p.title.toLowerCase().includes(query) || p.body.toLowerCase().includes(query);
+        const matchesTitleOrBody = p.title.toLowerCase().includes(query) || p.body.toLowerCase().includes(query);
         const matchesUsername = p.author.toLowerCase().includes(query) || `@${p.author.toLowerCase()}`.includes(query);
-        return matchesKeyword || matchesUsername;
+        const matchesTool = p.tool.toLowerCase().includes(query);
+        const matchesVibe = p.vibe ? p.vibe.toLowerCase().includes(query) : false;
+        const matchesPlea = p.plea ? p.plea.toLowerCase().includes(query) : false;
+        const matchesVerdict = p.verdict ? p.verdict.toLowerCase().includes(query) : false;
+        const matchesStatus = p.status ? p.status.toLowerCase().includes(query) : false;
+        const matchesAiDefense = p.aiDefense ? p.aiDefense.toLowerCase().includes(query) : false;
+        
+        return matchesTitleOrBody || matchesUsername || matchesTool || matchesVibe || matchesPlea || matchesVerdict || matchesStatus || matchesAiDefense;
       }
 
       // Filter by horizontal sub-tabs category selections
@@ -161,9 +158,9 @@ export function FeedV2() {
   const subTabs = [
     { id: "for-you", label: "For You" },
     { id: "trending", label: "Trending" },
-    { id: "claude", label: "Claude Fails" },
-    { id: "chatgpt", label: "GPT Fails" },
-    { id: "gemini", label: "Gemini Fails" }
+    { id: "claude", label: "Claude Code Fails" },
+    { id: "chatgpt", label: "Codex Fails" },
+    { id: "gemini", label: "Antigravity Fails" }
   ];
 
   return (
@@ -214,10 +211,27 @@ export function FeedV2() {
             Notifications
           </span>
         </div>
+      ) : search.user ? (
+        <div className="sticky top-0 bg-paper/85 backdrop-blur-md z-10 border-b border-ink/10 px-4 py-3.5 flex items-center gap-3">
+          <button
+            onClick={() => router.navigate({ to: "/feed", search: (prev: any) => {
+              const { user, ...rest } = prev;
+              return rest;
+            }})}
+            className="p-2 hover:bg-ink/5 dark:hover:bg-zinc-900 text-muted-foreground hover:text-ink dark:hover:text-zinc-100 rounded-full transition-colors cursor-pointer flex items-center justify-center"
+            title="Back to feed"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div className="text-left">
+            <h2 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 leading-tight">@{search.user}</h2>
+            <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider">{postCount} {postCount === 1 ? "confession" : "confessions"}</span>
+          </div>
+        </div>
       ) : (
         <div className="sticky top-0 bg-paper/80 backdrop-blur-md z-10 border-b border-ink/10 flex w-full">
           <button 
-            onClick={() => router.navigate({ to: "/", search: {} as any })}
+            onClick={() => router.navigate({ to: "/feed", search: {} as any })}
             className={`flex-1 py-4 font-bold text-[15px] hover:bg-hot/5 hover:text-hot transition-colors relative
               ${(activeTab === "for-you" || !search.tab) ? "text-hot font-bold" : "text-muted-foreground font-medium"}`}
           >
@@ -225,7 +239,7 @@ export function FeedV2() {
             {(activeTab === "for-you" || !search.tab) && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />}
           </button>
           <button 
-            onClick={() => router.navigate({ to: "/", search: { tab: "following" } as any })}
+            onClick={() => router.navigate({ to: "/feed", search: { tab: "following" } as any })}
             className={`flex-1 py-4 font-bold text-[15px] hover:bg-hot/5 hover:text-hot transition-colors relative
               ${activeTab === "following" ? "text-hot font-bold" : "text-muted-foreground font-medium"}`}
           >
@@ -235,7 +249,7 @@ export function FeedV2() {
           
           {user && !user.isGuest && (
             <button 
-              onClick={() => router.navigate({ to: "/", search: { tab: "my-posts" } as any })}
+              onClick={() => router.navigate({ to: "/feed", search: { tab: "my-posts" } as any })}
               className={`flex-1 py-4 font-bold text-[15px] hover:bg-hot/5 hover:text-hot transition-colors relative
                 ${activeTab === "my-posts" ? "text-hot font-bold" : "text-muted-foreground font-medium"}`}
             >
@@ -243,11 +257,69 @@ export function FeedV2() {
               {activeTab === "my-posts" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />}
             </button>
           )}
+
+          {activeTab === "saved-posts" && (
+            <button 
+              onClick={() => router.navigate({ to: "/feed", search: { tab: "saved-posts" } as any })}
+              className="flex-1 py-4 font-bold text-[15px] hover:bg-hot/5 hover:text-hot transition-colors relative text-hot font-bold"
+            >
+              Saved Fails
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />
+            </button>
+          )}
         </div>
       )}
 
       {/* Main Column Feed Area */}
       <div className="flex-1 flex flex-col">
+        <div id="feed-start" />
+        
+        {search.user && (
+          <div className="border-b border-ink/10 dark:border-zinc-900 bg-zinc-50/20 dark:bg-zinc-950/10 p-6 text-left relative overflow-hidden">
+            {/* Background design accents */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-hot/5 rounded-full filter blur-3xl pointer-events-none" />
+            
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-5 relative z-10">
+              <div className="flex items-start gap-4">
+                <img 
+                  src={getAvatarUrl(search.user)} 
+                  alt="avatar" 
+                  className="w-16 h-16 sm:w-20 sm:h-20 bg-ink/5 dark:bg-zinc-900 rounded-full border-2 border-ink dark:border-zinc-800 object-cover shadow-md shrink-0" 
+                />
+                <div className="min-w-0 pt-1">
+                  <h1 className="font-black text-2xl sm:text-3xl text-ink dark:text-zinc-50 uppercase tracking-tight leading-none mb-1">
+                    {search.user}
+                  </h1>
+                  <span className="text-[14px] text-muted-foreground font-semibold">@{search.user.toLowerCase()}</span>
+                  <p className="text-xs sm:text-[13px] text-ink/75 dark:text-zinc-350 mt-2.5 max-w-md leading-relaxed font-normal font-sans">
+                    Vibe coder sharing AI coding disasters and production bug receipts. Regretting commits since day one.
+                  </p>
+                </div>
+              </div>
+              
+              {/* Follow Button */}
+              {user && user.username !== search.user && (
+                <button
+                  onClick={() => {
+                    const handle = `@${search.user.toLowerCase()}`;
+                    if (followedAccounts.includes(handle)) {
+                      setFollowedAccounts(followedAccounts.filter(h => h !== handle));
+                    } else {
+                      setFollowedAccounts([...followedAccounts, handle]);
+                    }
+                  }}
+                  className={`px-5 py-2 rounded-full text-xs font-black transition-all shrink-0 shadow-sm uppercase tracking-wider border cursor-pointer ${
+                    followedAccounts.includes(`@${search.user.toLowerCase()}`)
+                      ? "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-muted-foreground" 
+                      : "bg-hot hover:bg-hot/95 text-white border-transparent"
+                  }`}
+                >
+                  {followedAccounts.includes(`@${search.user.toLowerCase()}`) ? "Following" : "Follow"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
         
         {/* EXPLORE PAGE: WHO TO FOLLOW (Only shown when explore is active) */}
         {activeTab === "explore" && (
@@ -307,7 +379,21 @@ export function FeedV2() {
             
             {/* explore Posts Feed Items */}
             <div className="flex-1">
-              {explorePosts.map((p) => <PostCard key={p.id} post={p} comments={comments} />)}
+              {explorePosts.map((p) => (
+                <PostCard 
+                  key={p.id} 
+                  post={p} 
+                  comments={comments} 
+                  followedAccounts={followedAccounts}
+                  onFollowToggle={(handle) => {
+                    if (followedAccounts.includes(handle)) {
+                      setFollowedAccounts(followedAccounts.filter(h => h !== handle));
+                    } else {
+                      setFollowedAccounts([...followedAccounts, handle]);
+                    }
+                  }}
+                />
+              ))}
               {explorePosts.length === 0 && (
                 <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
                   <AlertCircle className="w-8 h-8 text-muted-foreground/60 mb-2" />
@@ -361,7 +447,7 @@ export function FeedV2() {
                 <h2 className="text-[20px] font-bold text-ink dark:text-zinc-100 mb-2">Login to see following feed</h2>
                 <p className="text-muted-foreground text-xs leading-relaxed max-w-sm mb-6">Create an account or login to follow other vibe coders and see their code confessions right in your feed.</p>
                 <button 
-                  onClick={() => router.navigate({ to: "/", search: {} as any })}
+                  onClick={() => router.navigate({ to: "/feed", search: {} as any })}
                   className="bg-ink dark:bg-zinc-100 text-paper dark:text-zinc-950 hover:opacity-90 font-bold py-2.5 px-6 rounded-full text-xs shadow-sm uppercase tracking-wider transition-colors"
                 >
                   Return Home
@@ -373,7 +459,7 @@ export function FeedV2() {
                   <h2 className="text-[20px] font-bold text-ink dark:text-zinc-100 mb-2">Login to view followers</h2>
                   <p className="text-muted-foreground text-xs leading-relaxed max-w-sm mb-6">Create an account or login to view your followers and following lists.</p>
                   <button 
-                    onClick={() => router.navigate({ to: "/", search: {} as any })}
+                    onClick={() => router.navigate({ to: "/feed", search: {} as any })}
                     className="bg-ink dark:bg-zinc-100 text-paper dark:text-zinc-950 hover:opacity-90 font-bold py-2.5 px-6 rounded-full text-xs shadow-sm uppercase tracking-wider transition-colors"
                   >
                     Return Home
@@ -507,8 +593,25 @@ export function FeedV2() {
               )
             ) : (
               <div className="flex-1">
-                {visible.map((p) => <PostCard key={p.id} post={p} comments={comments} />)}
-                {visible.length === 0 && (
+                {finalFeedPosts.map((p) => (
+                  <PostCard 
+                    key={p.id} 
+                    post={p} 
+                    comments={comments} 
+                    forceShowComments={p.id === search.post}
+                    isHighlighted={p.id === search.post}
+                    followedAccounts={followedAccounts}
+                    hideFollowButton={!!search.user}
+                    onFollowToggle={(handle) => {
+                      if (followedAccounts.includes(handle)) {
+                        setFollowedAccounts(followedAccounts.filter(h => h !== handle));
+                      } else {
+                        setFollowedAccounts([...followedAccounts, handle]);
+                      }
+                    }}
+                  />
+                ))}
+                {finalFeedPosts.length === 0 && (
                   <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
                     {activeTab === "following" ? (
                       <>
@@ -516,7 +619,7 @@ export function FeedV2() {
                         <h3 className="text-md font-bold text-ink dark:text-zinc-100 mb-1">No confessions from people you follow</h3>
                         <p className="text-xs mb-4 max-w-xs">Your followed creators haven't posted any code fails recently, or you aren't following anyone yet. Head over to the Explore tab to find and follow vibe coders!</p>
                         <button
-                          onClick={() => router.navigate({ to: "/", search: { tab: "explore" } as any })}
+                          onClick={() => router.navigate({ to: "/feed", search: { tab: "explore" } as any })}
                           className="bg-hot hover:bg-hot/90 text-paper font-bold py-2 px-4 rounded-full text-xs transition-colors shadow-sm"
                         >
                           Find Vibe Coders
@@ -526,6 +629,12 @@ export function FeedV2() {
                       <>
                         <h3 className="text-md font-bold text-ink dark:text-zinc-100 mb-1">No confessions yet</h3>
                         <p className="text-xs mb-6 max-w-xs">You haven't posted any code confessions yet. Share your first failure and let the community heal together!</p>
+                      </>
+                    ) : activeTab === "saved-posts" ? (
+                      <>
+                        <Bookmark className="w-8 h-8 text-muted-foreground/60 mb-2" />
+                        <h3 className="text-md font-bold text-ink dark:text-zinc-100 mb-1">No saved confessions</h3>
+                        <p className="text-xs mb-6 max-w-xs">You haven't saved any confessions yet. Click the bookmark icon on any confession to save it here!</p>
                       </>
                     ) : (
                       <p className="text-xs">Nothing to see here — yet.</p>
@@ -552,13 +661,48 @@ function FlameIcon(props: any) {
   );
 }
 
+const VIBE_LABELS: Record<string, string> = {
+  "vibe_coding": "Vibe Coding",
+  "deadline_panic": "Deadline Panic",
+  "drunk_coded": "Drunk Coded",
+  "prod_on_fire": "Prod On Fire",
+  "4am_energy": "4AM Energy",
+  "agentic_rogue": "Agentic Rogue",
+  "just_woke_up": "Just Woke Up",
+  "worked_5min_ago": "Worked 5m Ago",
+  "trust_the_process": "Trust Process",
+};
+
 // Reusable PostCard Component to render confessions in subpage lists
-function PostCard({ post, comments }: { post: any; comments: any[] }) {
+function PostCard({ 
+  post, 
+  comments, 
+  forceShowComments, 
+  isHighlighted,
+  followedAccounts = [],
+  onFollowToggle,
+  hideFollowButton = false
+}: { 
+  post: any; 
+  comments: any[]; 
+  forceShowComments?: boolean; 
+  isHighlighted?: boolean; 
+  followedAccounts?: string[];
+  onFollowToggle?: (handle: string) => void;
+  hideFollowButton?: boolean;
+}) {
   const router = useRouter();
   const { user } = useStore();
+  const isAnon = post.author.toLowerCase().startsWith("anon-");
   const commentCount = comments.filter((c: any) => c.postId === post.id).length;
 
-  const [showComments, setShowComments] = useState(false);
+  const [showComments, setShowComments] = useState(forceShowComments || false);
+
+  useEffect(() => {
+    if (forceShowComments) {
+      setShowComments(true);
+    }
+  }, [forceShowComments]);
   const [newCommentBody, setNewCommentBody] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
@@ -584,6 +728,12 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
     if (!editedTitle.trim() || !editedBody.trim() || isSavingEdit) return;
     setIsSavingEdit(true);
     try {
+      const vetResult = await vetContent(editedTitle.trim(), editedBody.trim());
+      if (!vetResult.ok) {
+        alert(vetResult.error || "Offensive content detected. Please keep it clean!");
+        setIsSavingEdit(false);
+        return;
+      }
       await updatePost(post.id, {
         title: editedTitle.trim(),
         body: editedBody.trim(),
@@ -615,6 +765,12 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
     if (!newCommentBody.trim() || submittingComment) return;
     setSubmittingComment(true);
     try {
+      const vetResult = await vetContent("", newCommentBody.trim());
+      if (!vetResult.ok) {
+        alert(vetResult.error || "Offensive content detected. Please keep it respectful.");
+        setSubmittingComment(false);
+        return;
+      }
       await addComment(post.id, newCommentBody.trim());
       setNewCommentBody("");
     } catch (err) {
@@ -624,42 +780,109 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
     }
   };
 
-  const getToolBadgeStyle = (tool: string) => {
+  const getToolDisplayName = (tool: string) => {
     const t = tool.toLowerCase();
-    if (t === "claude") {
-      return "bg-amber-100/40 text-amber-800 dark:bg-amber-950/20 dark:text-amber-300 border-amber-200/40";
-    } else if (t === "chatgpt") {
-      return "bg-emerald-100/40 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-300 border-emerald-200/40";
-    } else if (t === "cursor") {
-      return "bg-orange-100/40 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300 border-orange-200/40";
-    } else if (t === "gemini") {
-      return "bg-blue-100/40 text-blue-800 dark:bg-blue-950/20 dark:text-blue-300 border-blue-200/40";
-    } else if (t === "copilot") {
-      return "bg-orange-100/40 text-orange-800 dark:bg-orange-950/20 dark:text-orange-300 border-orange-200/40";
-    } else if (t === "v0") {
-      return "bg-zinc-100/50 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-800";
-    }
-    return "bg-zinc-100/50 text-zinc-700 dark:bg-zinc-900/30 dark:text-zinc-300 border-zinc-200/50 dark:border-zinc-800";
+    if (t === "chatgpt") return "Codex";
+    if (t === "claude") return "Claude Code";
+    if (t === "gemini") return "Antigravity";
+    return tool.charAt(0).toUpperCase() + tool.slice(1);
+  };
+
+  const getToolBadgeStyle = (_tool: string) => {
+    return "bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]";
   };
 
   return (
     <div 
-      className="py-5 px-6 border-b border-ink/5 dark:border-zinc-900 hover:bg-ink/[0.005] dark:hover:bg-zinc-900/10 transition-all flex gap-4"
+      className="py-5 px-3 sm:px-6 border-b border-ink/5 dark:border-zinc-900 hover:bg-ink/[0.005] dark:hover:bg-zinc-900/10 transition-all flex gap-3 sm:gap-4"
     >
-      <div className="w-10 h-10 shrink-0">
-        <img 
-          src={getAvatarUrl(post.author)} 
-          alt="avatar" 
-          className="w-full h-full bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/5 dark:border-zinc-800" 
-        />
+      <div className="hidden sm:block w-10 h-10 shrink-0">
+        {!isAnon ? (
+          <button
+            onClick={() => router.navigate({ to: "/feed", search: (prev: any) => ({ ...prev, user: post.author }) })}
+            className="w-full h-full cursor-pointer hover:opacity-90 transition-opacity"
+            title={`View @${post.author}'s confessions`}
+          >
+            <img 
+              src={getAvatarUrl(post.author)} 
+              alt="avatar" 
+              className="w-full h-full bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/5 dark:border-zinc-800 object-cover" 
+            />
+          </button>
+        ) : (
+          <img 
+            src={getAvatarUrl("anonymous")} 
+            alt="avatar" 
+            className="w-full h-full bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/5 dark:border-zinc-800 object-cover" 
+          />
+        )}
       </div>
       <div className="flex-1 text-left min-w-0">
         <div className="flex items-center justify-between gap-1.5 mb-1.5 flex-wrap">
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="font-bold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors">{post.author}</span>
-            <span className="text-[13px] text-muted-foreground">@{post.author}</span>
+            {/* Mobile-only inline avatar */}
+            {!isAnon ? (
+              <button
+                onClick={() => router.navigate({ to: "/feed", search: (prev: any) => ({ ...prev, user: post.author }) })}
+                className="sm:hidden w-8 h-8 rounded-full cursor-pointer hover:opacity-90 transition-opacity shrink-0 mr-1"
+                title={`View @${post.author}'s confessions`}
+              >
+                <img 
+                  src={getAvatarUrl(post.author)} 
+                  alt="avatar" 
+                  className="w-full h-full rounded-full bg-ink/5 dark:bg-zinc-900 border border-ink/5 dark:border-zinc-800 object-cover" 
+                />
+              </button>
+            ) : (
+              <img 
+                src={getAvatarUrl("anonymous")} 
+                alt="avatar" 
+                className="sm:hidden w-8 h-8 rounded-full bg-ink/5 dark:bg-zinc-900 border border-ink/5 dark:border-zinc-800 object-cover shrink-0 mr-1" 
+              />
+            )}
+
+            {!isAnon ? (
+              <>
+                <button
+                  onClick={() => router.navigate({ to: "/feed", search: (prev: any) => ({ ...prev, user: post.author }) })}
+                  className="font-bold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors cursor-pointer text-left leading-snug"
+                >
+                  {post.author}
+                </button>
+                <span className="text-[13px] text-muted-foreground">@{post.author}</span>
+              </>
+            ) : (
+              <span className="font-bold text-[14px] text-ink dark:text-zinc-100 select-none">Anonymous</span>
+            )}
+
+            {!isAnon && !isAuthor && onFollowToggle && !hideFollowButton && (
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onFollowToggle(`@${post.author.toLowerCase()}`);
+                }}
+                className={`ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all select-none cursor-pointer border ${
+                  followedAccounts.includes(`@${post.author.toLowerCase()}`)
+                    ? "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-muted-foreground" 
+                    : "bg-hot hover:bg-hot/95 text-white border-transparent"
+                }`}
+              >
+                {followedAccounts.includes(`@${post.author.toLowerCase()}`) ? "Following" : "Follow"}
+              </button>
+            )}
             <span className="text-muted-foreground px-0.5 text-xs">·</span>
             <span className="text-[13px] text-muted-foreground">{timeAgo(post.createdAt)}</span>
+            
+            {/* Mobile-only compact badges */}
+            {post.vibe && (
+              <span className="sm:hidden text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border scale-90 bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]">
+                {VIBE_LABELS[post.vibe] || post.vibe.replace(/_/g, ' ')}
+              </span>
+            )}
+            <span className="sm:hidden text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border scale-90 bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]">
+              {getToolDisplayName(post.tool)}
+            </span>
           </div>
 
           {/* Three Dots Post Dropdown Menu */}
@@ -834,10 +1057,10 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
         {/* Modern Interactive Action Bar */}
         <div className="flex items-center justify-between mt-5 pt-3.5 border-t border-ink/5 dark:border-zinc-900/60 flex-wrap gap-4 select-none">
           {/* Left Side: Reactions, Comments, Share */}
-          <div className="flex items-center gap-3 text-muted-foreground text-[13px] flex-1 min-w-0">
+          <div className="flex items-center justify-center sm:justify-start gap-1.5 sm:gap-3 text-muted-foreground text-[13px] flex-1 min-w-0">
             
             {/* Reactions Group */}
-            <div className="flex flex-row items-center gap-1.5 bg-zinc-50 dark:bg-zinc-900/40 p-0.5 rounded-full border border-zinc-200/30 dark:border-zinc-800/40">
+            <div className="flex flex-row items-center gap-0.5 sm:gap-1.5 bg-zinc-50 dark:bg-zinc-900/40 p-0.5 rounded-full border border-zinc-200/30 dark:border-zinc-800/40">
               {(Object.keys(REACTION_META) as Reaction[]).map((rKey) => {
                 const rMeta = REACTION_META[rKey];
                 const active = hasReacted(post.id, rKey);
@@ -850,7 +1073,7 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
                       e.stopPropagation(); // prevent navigating to details page
                       toggleReaction(post.id, rKey);
                     }}
-                    className={`relative group flex items-center gap-1 px-2 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
+                    className={`relative group flex items-center gap-0.5 sm:gap-1 px-1.5 sm:px-2 py-1 rounded-full transition-all cursor-pointer shrink-0 ${
                       active 
                         ? "bg-hot/15 text-hot font-bold" 
                         : "hover:bg-ink/5 dark:hover:bg-zinc-800/80 hover:text-ink dark:hover:text-zinc-200"
@@ -901,29 +1124,20 @@ function PostCard({ post, comments }: { post: any; comments: any[] }) {
               title={isSaved ? "Remove Bookmark" : "Save Confession"}
             >
               <Bookmark className={`w-4 h-4 transition-transform group-hover:scale-110 ${isSaved ? "fill-current" : ""}`} />
-              <span className="font-semibold text-[12px]">{isSaved ? "Saved" : "Save"}</span>
             </button>
 
           </div>
           
           {/* Right Side: Tool & Status Badges */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="hidden sm:flex items-center gap-2 shrink-0">
+            {post.vibe && (
+              <span className="text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full border bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]">
+                {VIBE_LABELS[post.vibe] || post.vibe.replace(/_/g, ' ')}
+              </span>
+            )}
             <span className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full border ${getToolBadgeStyle(post.tool)}`}>
-              {post.tool}
+              {getToolDisplayName(post.tool)}
             </span>
-            <button 
-              onClick={(e) => {
-                e.stopPropagation();
-                setStatus(post.id, post.status === "broken" ? "solved" : "broken");
-              }}
-              className={`text-[10px] uppercase tracking-wider font-extrabold px-2.5 py-0.5 rounded-full border transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-                post.status === "broken" 
-                  ? "bg-red-50/50 text-red-700/80 border-red-200/40 dark:bg-red-950/20 dark:text-red-300 dark:border-red-900/30 hover:bg-red-100/40" 
-                  : "bg-emerald-50/50 text-emerald-700/80 border-emerald-200/40 dark:bg-emerald-950/20 dark:text-emerald-300 dark:border-emerald-900/30 hover:bg-emerald-100/40"
-              }`}
-            >
-              {post.status === "broken" ? "Still Broken" : "Solved"}
-            </button>
           </div>
         </div>
 
@@ -1341,7 +1555,6 @@ function ShareButton({ postId, postTitle }: { postId: string; postTitle: string 
         }`}
       >
         <svg viewBox="0 0 24 24" className="w-4.5 h-4.5 fill-none stroke-current stroke-[2px] transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" /></svg>
-        <span className="font-semibold text-[12px]">Share</span>
       </button>
 
       {menuOpen && (

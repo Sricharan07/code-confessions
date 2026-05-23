@@ -1,7 +1,7 @@
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { AuthModalV2 } from "./AuthModalV2";
-import { Home, TrendingUp, BookOpen, Compass, Bell, User, Plus, LogOut, Sun, Moon, Monitor } from "lucide-react";
+import { Home, TrendingUp, BookOpen, Compass, Bell, User, Plus, LogOut, Sun, Moon, Monitor, Bookmark } from "lucide-react";
 import { useStore, setAuthUser, logout, setFeedTab, setTheme, getAvatarUrl } from "@/lib/store";
 
 export function SidebarV2() {
@@ -13,11 +13,11 @@ export function SidebarV2() {
   const activeTab = search.tab || "for-you";
 
   const navItems = [
-    { label: "Home", icon: Home, to: "/", search: {} },
-    { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
-    { label: "Following", icon: BookOpen, to: "/", search: { tab: "followers" } },
-    { label: "Explore", icon: Compass, to: "/", search: { tab: "explore" } },
-    { label: "Activity", icon: Bell, to: "/", search: { tab: "activity" } },
+    { label: "Home", icon: Home, to: "/feed", search: {} },
+    { label: "Popular", icon: TrendingUp, to: "/feed", search: { tab: "popular" } },
+    { label: "Following", icon: BookOpen, to: "/feed", search: { tab: "followers" } },
+    { label: "Explore", icon: Compass, to: "/feed", search: { tab: "explore" } },
+    { label: "Activity", icon: Bell, to: "/feed", search: { tab: "activity" } },
   ];
 
   return (
@@ -56,7 +56,7 @@ export function SidebarV2() {
                   to={item.to}
                   search={item.search as any}
                   onClick={handleClick}
-                  className={`group flex items-center gap-4 px-4 py-3 hover:bg-hot/10 dark:hover:bg-hot/10 rounded-full transition-all w-[220px] -ml-4 ${
+                  className={`group flex items-center gap-4 px-4 py-3 hover:bg-hot/10 dark:hover:bg-hot/10 rounded-full transition-all w-[250px] -ml-4 ${
                     isActive 
                       ? "font-bold text-hot dark:text-hot" 
                       : "font-normal text-ink dark:text-zinc-200"
@@ -122,19 +122,42 @@ export function SidebarV2() {
 
                 <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
 
-                {user && !user.isGuest ? (
+                {user ? (
                   <>
                     <button
                       onClick={() => {
                         setProfileMenuOpen(false);
                         setFeedTab("my-posts");
-                        router.navigate({ to: "/" });
+                        router.navigate({ to: "/feed", search: { tab: "my-posts" } as any });
                       }}
                       className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
                     >
                       <User className="w-4 h-4 text-muted-foreground" />
                       <span>My Fails</span>
                     </button>
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        setFeedTab("saved-posts" as any);
+                        router.navigate({ to: "/feed", search: { tab: "saved-posts" } as any });
+                      }}
+                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                    >
+                      <Bookmark className="w-4 h-4 text-muted-foreground" />
+                      <span>Saved Fails</span>
+                    </button>
+                    {user.isGuest && (
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          setAuthOpen(true);
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                      >
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>Log In / Sign Up</span>
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>
