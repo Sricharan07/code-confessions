@@ -381,6 +381,7 @@ export function FeedV2() {
                       setFollowedAccounts([...followedAccounts, handle]);
                     }
                   }}
+                  onImageClick={setActiveLightboxImg}
                 />
               ))}
               {explorePosts.length === 0 && (
@@ -605,6 +606,7 @@ export function FeedV2() {
                         setFollowedAccounts([...followedAccounts, handle]);
                       }
                     }}
+                    onImageClick={setActiveLightboxImg}
                   />
                 ))}
                 {finalFeedPosts.length === 0 && (
@@ -699,7 +701,8 @@ function PostCard({
   isHighlighted,
   followedAccounts = [],
   onFollowToggle,
-  hideFollowButton = false
+  hideFollowButton = false,
+  onImageClick
 }: { 
   post: any; 
   comments: any[]; 
@@ -708,6 +711,7 @@ function PostCard({
   followedAccounts?: string[];
   onFollowToggle?: (handle: string) => void;
   hideFollowButton?: boolean;
+  onImageClick: (url: string) => void;
 }) {
   const router = useRouter();
   const { user } = useStore();

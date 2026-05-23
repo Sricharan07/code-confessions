@@ -10,6 +10,7 @@ type FeedSearchParams = {
   tab?: string;
   compose?: string;
   post?: string;
+  user?: string;
 };
 
 export const Route = createFileRoute("/feed")({
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/feed")({
       tab: search.tab as string | undefined,
       compose: search.compose as string | undefined,
       post: search.post as string | undefined,
+      user: search.user as string | undefined,
     };
   },
   component: V2Layout,

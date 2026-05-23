@@ -25,7 +25,7 @@ function EditPost() {
   // Redirect if not found
   useEffect(() => {
     if (posts.length > 0 && !post) {
-      router.navigate({ to: "/" });
+      router.navigate({ to: "/feed" });
     }
   }, [posts, post, router]);
 
@@ -83,11 +83,11 @@ function EditPost() {
   }, []);
 
   const navItems = [
-    { label: "Home", icon: Home, to: "/", search: {} },
-    { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
-    { label: "Following", icon: BookOpen, to: "/", search: { tab: "followers" } },
-    { label: "Explore", icon: Compass, to: "/", search: { tab: "explore" } },
-    { label: "Activity", icon: Bell, to: "/", search: { tab: "activity" } },
+    { label: "Home", icon: Home, to: "/feed", search: {} },
+    { label: "Popular", icon: TrendingUp, to: "/feed", search: { tab: "popular" } },
+    { label: "Following", icon: BookOpen, to: "/feed", search: { tab: "followers" } },
+    { label: "Explore", icon: Compass, to: "/feed", search: { tab: "explore" } },
+    { label: "Activity", icon: Bell, to: "/feed", search: { tab: "activity" } },
   ];
 
   const handleMobileNavClick = (item: any, e: any) => {
@@ -156,7 +156,7 @@ function EditPost() {
         aiDefenseImage,
       });
 
-      router.navigate({ to: "/" });
+      router.navigate({ to: "/feed" });
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || "Failed to update the confession. Please try again.";
