@@ -78,7 +78,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const { theme } = useStore();
-  const isV2 = router.state.location.pathname === '/' || router.state.location.pathname === '/submit';
+  const isV2 = router.state.location.pathname === '/feed' || router.state.location.pathname === '/submit';
   const isAdmin = router.state.location.pathname === '/admin';
 
   useEffect(() => {
@@ -116,28 +116,15 @@ function RootComponent() {
     );
   }
 
-  if (isV2) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <div className="flex flex-col h-dvh overflow-hidden">
-          <MigrationBanner />
-          <Header />
-          <div className="flex-1 overflow-hidden">
-            <Outlet />
-          </div>
-        </div>
-      </QueryClientProvider>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
-      <MigrationBanner />
-      <Header />
-      <Outlet />
-      <footer className="mt-24 border-t-2 border-ink py-8 mono text-xs text-center">
-        VIBEFAIL · made with regret · <a href="/" className="underline">no logins, no rules, just receipts</a>
-      </footer>
+      <div className={`flex flex-col ${isV2 ? 'h-dvh overflow-hidden' : 'min-h-screen bg-paper dark:bg-zinc-950'}`}>
+        <MigrationBanner />
+        <Header />
+        <div className={`flex-1 ${isV2 ? 'overflow-hidden' : ''}`}>
+          <Outlet />
+        </div>
+      </div>
     </QueryClientProvider>
   );
 }

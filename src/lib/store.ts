@@ -4,19 +4,38 @@ const API_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const TOKEN_KEY = "vibefail.auth_token";
 const REFRESH_TOKEN_KEY = "vibefail.refresh_token";
 
+let rememberSession = true;
+
+export function setRememberSession(remember: boolean) {
+  rememberSession = remember;
+}
+
 function getToken(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
 }
 
 function setToken(token: string, refreshToken?: string) {
-  localStorage.setItem(TOKEN_KEY, token);
-  if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  if (rememberSession) {
+    localStorage.setItem(TOKEN_KEY, token);
+    if (refreshToken) localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  } else {
+    sessionStorage.setItem(TOKEN_KEY, token);
+    if (refreshToken) sessionStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
 }
 
 function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+  if (typeof window !== "undefined") {
+    sessionStorage.removeItem(TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+  }
 }
 
 async function apiCall(path: string, method: "GET" | "POST", body?: any) {
@@ -67,6 +86,7 @@ export interface Comment {
   postId: string;
   body: string;
   author: string;
+  authorSessionId?: string;
   createdAt: number;
 }
 
@@ -133,6 +153,7 @@ function mapCommentFromDb(c: any): Comment {
     postId: c.postId || c.post_id,
     body: c.body,
     author: c.author,
+    authorSessionId: c.authorSessionId || c.author_session_id || undefined,
     createdAt: typeof c.createdAt === "number" ? c.createdAt : new Date(c.created_at || c.createdAt).getTime(),
   };
 }
@@ -141,7 +162,7 @@ export type Theme = "light" | "dark" | "system";
 let posts: Post[] = [];
 let comments: Comment[] = [];
 let user: any = null;
-let feedTab: "for-you" | "following" | "my-posts" = "for-you";
+let feedTab: "for-you" | "following" | "my-posts" | "saved-posts" = "for-you";
 let theme: Theme = "system";
 let initialized = false;
 const listeners = new Set<() => void>();
@@ -149,7 +170,7 @@ let latestSnapshot = {
   posts: [] as Post[],
   comments: [] as Comment[],
   user: null as any,
-  feedTab: "for-you" as "for-you" | "following" | "my-posts",
+  feedTab: "for-you" as "for-you" | "following" | "my-posts" | "saved-posts",
   theme: "system" as Theme
 };
 
@@ -180,6 +201,7 @@ async function loadUserReactionsAndVotes() {
         ...user,
         role: data.profile.role || "user",
         username: data.profile.username || user?.username,
+        displayName: data.profile.display_name || user?.displayName,
       };
     }
 
@@ -356,7 +378,7 @@ export function useStore() {
   return useSyncExternalStore(subscribe, snapshot, () => serverSnapshot);
 }
 
-export function setFeedTab(tab: "for-you" | "following" | "my-posts") {
+export function setFeedTab(tab: "for-you" | "following" | "my-posts" | "saved-posts") {
   init();
   feedTab = tab;
   latestSnapshot = { posts, comments, user, feedTab, theme };
@@ -435,7 +457,7 @@ export function createPost(
     memeUrl: input.memeUrl,
     crimeSceneImage: input.crimeSceneImage,
     aiDefenseImage: input.aiDefenseImage,
-    author: input.author || user?.username || randomHandle(),
+    author: input.author || user?.displayName || user?.username || randomHandle(),
     authorSessionId: user?.id,
     status: "broken",
     createdAt: Date.now(),
@@ -481,7 +503,8 @@ export async function addComment(postId: string, body: string) {
     id,
     postId,
     body,
-    author: user ? user.username : randomHandle(),
+    author: user ? (user.displayName || user.username) : randomHandle(),
+    authorSessionId: user?.id,
     createdAt: Date.now(),
   };
 
@@ -845,5 +868,36 @@ export function useComments(postId: string) {
   return comments.filter((c) => c.postId === postId);
 }
 
+export async function refreshFeed() {
+  try {
+    const [postsData, commentsData] = await Promise.all([
+      apiCall("/api/posts", "GET"),
+      apiCall("/api/comments", "GET"),
+    ]);
+
+    if (Array.isArray(postsData)) {
+      posts = postsData.map(mapPostFromDb);
+    }
+    if (Array.isArray(commentsData)) {
+      comments = commentsData.map(mapCommentFromDb);
+    }
+    persist();
+  } catch (err) {
+    console.error("Failed to refresh feed:", err);
+  }
+}
+
 // Export apiCall and token helpers for other modules
 export { apiCall, getToken, setToken, clearToken };
+
+export async function vetContent(title?: string, body?: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await apiCall("/api/moderate", "POST", { title, body });
+    if (res && res.error) {
+      return { ok: false, error: res.error };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Failed moderation check." };
+  }
+}

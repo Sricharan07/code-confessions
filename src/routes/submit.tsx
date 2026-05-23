@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useState, useRef, useEffect } from "react";
-import { createPost, randomHandle, useStore, logout, setTheme, getAvatarUrl, setAuthUser } from "@/lib/store";
+import { createPost, randomHandle, useStore, logout, setTheme, getAvatarUrl, setAuthUser, vetContent } from "@/lib/store";
 import { useConfessForm } from "@/components/confess/useConfessForm";
 import { HeadlineInput } from "@/components/confess/HeadlineInput";
 import { SuspectPicker } from "@/components/confess/SuspectPicker";
 import { CrimeSceneTextarea } from "@/components/confess/CrimeSceneTextarea";
-import { VibePicker, VerdictPicker, PleaPicker } from "@/components/confess/FlairsPickers";
+import { VibePicker } from "@/components/confess/FlairsPickers";
 import { AIDefenseInput } from "@/components/confess/AIDefenseInput";
 import { LivePreviewCard } from "@/components/confess/LivePreviewCard";
 import { MemeCard } from "@/components/confess/MemeCard";
@@ -65,7 +65,7 @@ function Submit() {
   const [authOpen, setAuthOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const { user, theme } = useStore();
-  const activeHandle = user ? user.username : sessionAuthor;
+  const activeHandle = user ? (user.displayName || user.username) : sessionAuthor;
   const router = useRouter();
 
   useEffect(() => {
@@ -76,11 +76,11 @@ function Submit() {
   }, []);
 
   const navItems = [
-    { label: "Home", icon: Home, to: "/", search: {} },
-    { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
-    { label: "Following", icon: BookOpen, to: "/", search: { tab: "followers" } },
-    { label: "Explore", icon: Compass, to: "/", search: { tab: "explore" } },
-    { label: "Activity", icon: Bell, to: "/", search: { tab: "activity" } },
+    { label: "Home", icon: Home, to: "/feed", search: {} },
+    { label: "Popular", icon: TrendingUp, to: "/feed", search: { tab: "popular" } },
+    { label: "Following", icon: BookOpen, to: "/feed", search: { tab: "followers" } },
+    { label: "Explore", icon: Compass, to: "/feed", search: { tab: "explore" } },
+    { label: "Activity", icon: Bell, to: "/feed", search: { tab: "activity" } },
   ];
 
   const handleMobileNavClick = (item: any, e: any) => {
@@ -95,6 +95,21 @@ function Submit() {
 
   const handleActualSubmit = async () => {
     setIsSubmitting(true);
+    setLoadingStatus("VETTING UR CONTENT...");
+
+    try {
+      const combinedBody = crimeScene.trim() + (aiDefense.trim() ? "\n\nAI's Defense:\n" + aiDefense.trim() : "");
+      const vetResult = await vetContent(headline.trim(), combinedBody);
+      if (!vetResult.ok) {
+        setErrors([vetResult.error || "Offensive content detected. Please keep it clean!"]);
+        setIsSubmitting(false);
+        setLoadingStatus("");
+        return;
+      }
+    } catch (err: any) {
+      console.warn("Content vetting check bypassed due to exception:", err);
+    }
+
     setLoadingStatus("POSTING UR FAIL...");
 
     let twitterMemeUrl = "";
@@ -127,7 +142,7 @@ function Submit() {
         }
       }
 
-      const post = await createPost({
+      createPost({
         title: headline.trim(),
         body: crimeScene.trim(),
         tool: suspect,
@@ -146,13 +161,7 @@ function Submit() {
       setCrimeSceneImage(null);
       setAiDefenseImage(null);
 
-      setSuccessData({
-        postId: post.id,
-        headline: post.title,
-        twitterMemeUrl,
-        instaMemeUrl,
-        author: post.author,
-      });
+      router.navigate({ to: "/" });
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || "Failed to submit the confession. Please try again.";
@@ -251,17 +260,6 @@ function Submit() {
             author={successData.author}
             onRemixLayout={aiDefense.trim() || aiDefenseImage || successData.twitterMemeUrl ? handleRemix : undefined}
           />
-          <MemeCard
-            headline={successData.headline}
-            suspect={suspect}
-            aiDefense={aiDefense}
-            author={successData.author}
-            refInsta={refInsta}
-            refTwitter={refTwitter}
-            remixStyle={remixSeed}
-            crimeSceneImage={crimeSceneImage}
-            aiDefenseImage={aiDefenseImage}
-          />
           {isSubmitting && (
             <div className="fixed inset-0 bg-ink/70 backdrop-blur-md z-50 flex flex-col justify-center items-center p-4">
               <div className="bg-paper border border-ink/20 p-8 max-w-sm w-full text-center space-y-4 rounded-2xl shadow-xl flex flex-col items-center">
@@ -274,7 +272,7 @@ function Submit() {
         </div>
       );
     }    return (
-      <div className="mx-auto w-full max-w-2xl px-1 pt-4 pb-20 space-y-8">
+      <div className="mx-auto w-full max-w-2xl px-1 pt-4 pb-2 space-y-8">
         <div className="text-center space-y-2">
           <span className="inline-block mb-2.5 font-sans text-[10px] uppercase bg-hot text-white px-2.5 py-0.5 font-bold rounded-full select-none shadow-sm tracking-wider">
             Step into the booth
@@ -333,8 +331,6 @@ function Submit() {
             </div>
 
             <VibePicker value={vibe} onChange={setVibe} />
-            <VerdictPicker value={verdict} onChange={setVerdict} />
-            <PleaPicker value={plea} onChange={setPlea} />
           </div>
 
           {/* Section 3: AI's Defense */}
@@ -389,18 +385,6 @@ function Submit() {
           shortcuts: <strong className="font-bold">ctrl + enter</strong> to submit | <strong className="font-bold">esc</strong> to clear
         </div>
 
-        <MemeCard
-          headline={headline}
-          suspect={suspect}
-          aiDefense={aiDefense}
-          author={activeHandle}
-          refInsta={refInsta}
-          refTwitter={refTwitter}
-          remixStyle={remixSeed}
-          crimeSceneImage={crimeSceneImage}
-          aiDefenseImage={aiDefenseImage}
-        />
-
         {isSubmitting && (
           <div className="fixed inset-0 bg-ink/70 backdrop-blur-md z-50 flex flex-col justify-center items-center p-4">
             <div className="bg-paper border border-ink/20 p-6 max-w-xs w-full text-center space-y-3 rounded-2xl shadow-xl flex flex-col items-center">
@@ -429,7 +413,7 @@ function Submit() {
         <div className="relative">
           {user ? (
             <img 
-              src={getAvatarUrl(user.username)} 
+              src={getAvatarUrl(user.displayName || user.username)} 
               alt="avatar" 
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
@@ -484,22 +468,34 @@ function Submit() {
 
                 <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
 
-                {user && !user.isGuest ? (
+                {user ? (
                   <>
                     <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
-                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.username}</div>
+                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.isGuest ? "Guest" : user.username}</div>
                       <div className="text-[11px] text-muted-foreground truncate">@{user.username}</div>
                     </div>
                     <button
                       onClick={() => {
                         setProfileMenuOpen(false);
-                        router.navigate({ to: "/", search: { tab: "my-posts" } as any });
+                        router.navigate({ to: "/feed", search: { tab: "my-posts" } as any });
                       }}
                       className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
                     >
                       <User className="w-4 h-4 text-muted-foreground" />
                       <span>My Fails</span>
                     </button>
+                    {user.isGuest && (
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          setAuthOpen(true);
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                      >
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>Log In / Sign Up</span>
+                      </button>
+                    )}
                   </>
                 ) : (
                   <>
@@ -537,14 +533,14 @@ function Submit() {
         </div>
       </header>
 
-      <div className="w-full max-w-[1440px] flex flex-1 flex-row h-full overflow-hidden justify-center">
+      <div className="w-full max-w-[1440px] flex flex-1 flex-row min-h-0 overflow-hidden justify-center">
         {/* Left Sidebar - Desktop (hidden on mobile) */}
-        <aside className="hidden md:flex w-[310px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
+        <aside className="hidden md:flex w-[360px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
           <SidebarV2 />
         </aside>
 
-        {/* Form Container */}
-        <main className="flex-1 w-full max-w-[1130px] overflow-hidden p-4 sm:p-8 pb-24 md:pb-8 bg-paper">
+        {/* Main Form Column */}
+        <main className="flex-1 w-full max-w-[850px] h-full overflow-y-auto pb-20 md:pb-0 p-4 sm:p-8">
           {renderContent()}
         </main>
       </div>
@@ -566,6 +562,17 @@ function Submit() {
       </div>
 
       <AuthModalV2 isOpen={authOpen} onClose={() => setAuthOpen(false)} onLogin={setAuthUser} />
+      <MemeCard
+        headline={successData ? successData.headline : headline}
+        suspect={suspect}
+        aiDefense={aiDefense}
+        author={successData ? successData.author : activeHandle}
+        refInsta={refInsta}
+        refTwitter={refTwitter}
+        remixStyle={remixSeed}
+        crimeSceneImage={crimeSceneImage}
+        aiDefenseImage={aiDefenseImage}
+      />
     </div>
   );
 }
