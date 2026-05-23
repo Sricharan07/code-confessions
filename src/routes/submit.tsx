@@ -161,7 +161,7 @@ function Submit() {
       setCrimeSceneImage(null);
       setAiDefenseImage(null);
 
-      router.navigate({ to: "/" });
+      router.navigate({ to: "/feed" });
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || "Failed to submit the confession. Please try again.";
