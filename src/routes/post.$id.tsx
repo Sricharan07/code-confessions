@@ -17,7 +17,16 @@ export const Route = createFileRoute("/post/$id")({
 function PostPage() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const { posts, comments, user } = useStore();
+  const { posts, comments, user, loading } = useStore();
+
+  if (loading && posts.length === 0) {
+    return (
+      <div className="flex h-full min-h-screen items-center justify-center bg-paper">
+        <div className="animate-spin h-6 w-6 border-2 border-ink border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
   const post = posts.find((p) => p.id === id);
   if (!post) throw notFound();
   const thread = comments.filter((c) => c.postId === id).sort((a, b) => a.createdAt - b.createdAt);
@@ -81,8 +90,9 @@ function PostPage() {
                 <>
                   <button
                     onClick={async () => {
-                      await deletePost(post.id);
-                      navigate({ to: "/" });
+                      const postId = post.id;
+                      await navigate({ to: "/" });
+                      await deletePost(postId);
                     }}
                     className="brutal-btn text-xs bg-hot text-paper"
                   >
