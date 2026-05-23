@@ -85,7 +85,7 @@ function V2Layout() {
         <div className="relative">
           {user ? (
             <img 
-              src={getAvatarUrl(user.username)} 
+              src={getAvatarUrl(user.displayName || user.username)} 
               alt="avatar" 
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
@@ -143,8 +143,8 @@ function V2Layout() {
                 {user && !user.isGuest ? (
                   <>
                     <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
-                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.username}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">@{user.username}</div>
+                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.displayName || user.username}</div>
+                      <div className="text-[11px] text-muted-foreground truncate">@{user.displayName || user.username}</div>
                     </div>
                     <button
                       onClick={() => {

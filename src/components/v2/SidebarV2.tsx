@@ -177,17 +177,17 @@ export function SidebarV2() {
             >
               <div className="flex items-center gap-3 min-w-0 flex-1">
                 <img 
-                  src={getAvatarUrl(user.username)} 
+                  src={getAvatarUrl(user.displayName || user.username)} 
                   alt="avatar" 
                   className="w-10 h-10 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 shrink-0" 
                 />
                 <div className="hidden md:block text-left min-w-0 flex-1">
-                  <div className="font-bold text-[14px] leading-tight text-ink dark:text-zinc-200 whitespace-nowrap">{user.isGuest ? "Guest" : (user.username || "Anonymous")}</div>
+                  <div className="font-bold text-[14px] leading-tight text-ink dark:text-zinc-200 whitespace-nowrap">{user.isGuest ? "Guest" : (user.displayName || user.username || "Anonymous")}</div>
                   <div className="text-[13px] text-muted-foreground leading-tight whitespace-nowrap">
                     {user.isGuest ? (
                       <span className="text-hot hover:opacity-80 transition-opacity font-semibold">Login</span>
                     ) : (
-                      `@${user.username}`
+                      `@${user.displayName || user.username}`
                     )}
                   </div>
                 </div>
