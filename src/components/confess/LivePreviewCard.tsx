@@ -66,14 +66,10 @@ export function LivePreviewCard({
 
   // Determine tags
   const tags = [];
-  tags.push({ text: VERDICT_LABELS[verdict], type: verdict === "solved" ? "solved" : "broken" });
-  tags.push({ text: suspect.charAt(0).toUpperCase() + suspect.slice(1), type: "neutral" });
   if (vibe) {
     tags.push({ text: VIBE_LABELS[vibe] || vibe, type: "neutral" });
   }
-  if (plea) {
-    tags.push({ text: PLEA_LABELS[plea] || plea, type: "neutral" });
-  }
+  tags.push({ text: suspect.charAt(0).toUpperCase() + suspect.slice(1), type: "neutral" });
 
   return (
     <article className="border border-ink/15 rounded-xl p-5 bg-paper relative shadow-sm hover:border-ink/25 transition-all space-y-4">

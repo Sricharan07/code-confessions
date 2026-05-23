@@ -162,7 +162,7 @@ export type Theme = "light" | "dark" | "system";
 let posts: Post[] = [];
 let comments: Comment[] = [];
 let user: any = null;
-let feedTab: "for-you" | "following" | "my-posts" = "for-you";
+let feedTab: "for-you" | "following" | "my-posts" | "saved-posts" = "for-you";
 let theme: Theme = "system";
 let initialized = false;
 const listeners = new Set<() => void>();
@@ -171,7 +171,7 @@ let latestSnapshot = {
   posts: [] as Post[],
   comments: [] as Comment[],
   user: null as any,
-  feedTab: "for-you" as "for-you" | "following" | "my-posts",
+  feedTab: "for-you" as "for-you" | "following" | "my-posts" | "saved-posts",
   theme: "system" as Theme,
   loading: true
 };
@@ -383,7 +383,7 @@ export function useStore() {
   return useSyncExternalStore(subscribe, snapshot, () => serverSnapshot);
 }
 
-export function setFeedTab(tab: "for-you" | "following" | "my-posts") {
+export function setFeedTab(tab: "for-you" | "following" | "my-posts" | "saved-posts") {
   init();
   feedTab = tab;
   latestSnapshot = { posts, comments, user, feedTab, theme, loading };
@@ -894,3 +894,15 @@ export async function refreshFeed() {
 
 // Export apiCall and token helpers for other modules
 export { apiCall, getToken, setToken, clearToken };
+
+export async function vetContent(title?: string, body?: string): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await apiCall("/api/moderate", "POST", { title, body });
+    if (res && res.error) {
+      return { ok: false, error: res.error };
+    }
+    return { ok: true };
+  } catch (err: any) {
+    return { ok: false, error: err.message || "Failed moderation check." };
+  }
+}

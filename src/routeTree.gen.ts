@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubmitRouteImport } from './routes/submit'
+import { Route as FeedRouteImport } from './routes/feed'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PostIdRouteImport } from './routes/post.$id'
@@ -18,6 +19,11 @@ import { Route as EditIdRouteImport } from './routes/edit.$id'
 const SubmitRoute = SubmitRouteImport.update({
   id: '/submit',
   path: '/submit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const FeedRoute = FeedRouteImport.update({
+  id: '/feed',
+  path: '/feed',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -44,6 +50,7 @@ const EditIdRoute = EditIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/feed': typeof FeedRoute
   '/submit': typeof SubmitRoute
   '/edit/$id': typeof EditIdRoute
   '/post/$id': typeof PostIdRoute
@@ -51,6 +58,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/feed': typeof FeedRoute
   '/submit': typeof SubmitRoute
   '/edit/$id': typeof EditIdRoute
   '/post/$id': typeof PostIdRoute
@@ -59,21 +67,30 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/feed': typeof FeedRoute
   '/submit': typeof SubmitRoute
   '/edit/$id': typeof EditIdRoute
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/submit' | '/edit/$id' | '/post/$id'
+  fullPaths: '/' | '/admin' | '/feed' | '/submit' | '/edit/$id' | '/post/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/submit' | '/edit/$id' | '/post/$id'
-  id: '__root__' | '/' | '/admin' | '/submit' | '/edit/$id' | '/post/$id'
+  to: '/' | '/admin' | '/feed' | '/submit' | '/edit/$id' | '/post/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/admin'
+    | '/feed'
+    | '/submit'
+    | '/edit/$id'
+    | '/post/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  FeedRoute: typeof FeedRoute
   SubmitRoute: typeof SubmitRoute
   EditIdRoute: typeof EditIdRoute
   PostIdRoute: typeof PostIdRoute
@@ -86,6 +103,13 @@ declare module '@tanstack/react-router' {
       path: '/submit'
       fullPath: '/submit'
       preLoaderRoute: typeof SubmitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/feed': {
+      id: '/feed'
+      path: '/feed'
+      fullPath: '/feed'
+      preLoaderRoute: typeof FeedRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -122,6 +146,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  FeedRoute: FeedRoute,
   SubmitRoute: SubmitRoute,
   EditIdRoute: EditIdRoute,
   PostIdRoute: PostIdRoute,

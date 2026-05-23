@@ -108,10 +108,10 @@ function Admin() {
   };
 
   useEffect(() => {
-    if (isAuthorized && user) {
+    if (isAuthorized) {
       fetchData();
     }
-  }, [isAuthorized, user]);
+  }, [isAuthorized]);
 
   // Make user a moderator via worker API
   const grantModeratorStatus = async () => {
@@ -247,16 +247,6 @@ function Admin() {
     }
   };
 
-  if (!user) {
-    return (
-      <main className="min-h-screen bg-zinc-950 flex flex-col items-center justify-center p-6 text-center select-none font-sans">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-orange-950/20 via-zinc-950 to-zinc-950 -z-10" />
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-orange-500 mb-4" />
-        <p className="text-xl font-bold text-zinc-100 tracking-tight">Authenticating Mod Desk...</p>
-        <p className="text-[12px] text-zinc-500 mt-2 font-mono">Verifying local session with Supabase auth</p>
-      </main>
-    );
-  }
 
   if (!isAuthorized) {
     return (
