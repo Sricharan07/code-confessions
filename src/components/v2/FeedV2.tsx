@@ -888,7 +888,7 @@ function PostCard({
             {!isAnon ? (
               <button
                 onClick={() => router.navigate({ to: "/feed", search: (prev: any) => ({ ...prev, user: post.author }) })}
-                className="sm:hidden w-8 h-8 rounded-full cursor-pointer hover:opacity-90 transition-opacity shrink-0 mr-1"
+                className="sm:hidden w-8 h-8 rounded-full cursor-pointer hover:opacity-90 transition-opacity shrink-0 mr-1 order-1"
                 title={`View @${post.author}'s confessions`}
               >
                 <img 
@@ -901,22 +901,19 @@ function PostCard({
               <img 
                 src={getAvatarUrl("anonymous")} 
                 alt="avatar" 
-                className="sm:hidden w-8 h-8 rounded-full bg-ink/5 dark:bg-zinc-900 border border-ink/5 dark:border-zinc-800 object-cover shrink-0 mr-1" 
+                className="sm:hidden w-8 h-8 rounded-full bg-ink/5 dark:bg-zinc-900 border border-ink/5 dark:border-zinc-800 object-cover shrink-0 mr-1 order-1" 
               />
             )}
 
             {!isAnon ? (
-              <>
-                <button
-                  onClick={() => router.navigate({ to: "/feed", search: (prev: any) => ({ ...prev, user: post.author }) })}
-                  className="font-bold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors cursor-pointer text-left leading-snug"
-                >
-                  {post.author}
-                </button>
-                <span className="text-[13px] text-muted-foreground">@{post.author}</span>
-              </>
+              <button
+                onClick={() => router.navigate({ to: "/feed", search: (prev: any) => ({ ...prev, user: post.author }) })}
+                className="font-bold text-[14px] text-ink dark:text-zinc-100 hover:text-hot transition-colors cursor-pointer text-left leading-snug order-2"
+              >
+                {post.author}
+              </button>
             ) : (
-              <span className="font-bold text-[14px] text-ink dark:text-zinc-100 select-none">Anonymous</span>
+              <span className="font-bold text-[14px] text-ink dark:text-zinc-100 select-none order-2">Anonymous</span>
             )}
 
             {!isAnon && !isAuthor && onFollowToggle && !hideFollowButton && (
@@ -926,7 +923,7 @@ function PostCard({
                   e.stopPropagation();
                   onFollowToggle(`@${post.author.toLowerCase()}`);
                 }}
-                className={`ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all select-none cursor-pointer border ${
+                className={`ml-1.5 sm:ml-2.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold transition-all select-none cursor-pointer border order-5 sm:order-3 ${
                   followedAccounts.includes(`@${post.author.toLowerCase()}`)
                     ? "bg-zinc-100 dark:bg-zinc-800 border-zinc-200 dark:border-zinc-700 text-muted-foreground" 
                     : "bg-hot hover:bg-hot/95 text-white border-transparent"
@@ -935,16 +932,16 @@ function PostCard({
                 {followedAccounts.includes(`@${post.author.toLowerCase()}`) ? "Following" : "Follow"}
               </button>
             )}
-            <span className="text-muted-foreground px-0.5 text-xs">·</span>
-            <span className="text-[13px] text-muted-foreground">{timeAgo(post.createdAt)}</span>
+            <span className="text-muted-foreground px-0.5 text-xs order-3 sm:order-4">·</span>
+            <span className="text-[13px] text-muted-foreground order-4 sm:order-5">{timeAgo(post.createdAt)}</span>
             
             {/* Mobile-only compact badges */}
             {post.vibe && (
-              <span className="sm:hidden text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border scale-90 bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]">
+              <span className="sm:hidden text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border scale-90 bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12] order-6">
                 {VIBE_LABELS[post.vibe] || post.vibe.replace(/_/g, ' ')}
               </span>
             )}
-            <span className="sm:hidden text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border scale-90 bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12]">
+            <span className="sm:hidden text-[9px] uppercase tracking-wider font-extrabold px-2 py-0.5 rounded-full border scale-90 bg-black/[0.06] dark:bg-white/10 backdrop-blur-md text-ink/75 dark:text-zinc-300 border-black/[0.08] dark:border-white/[0.12] order-6">
               {getToolDisplayName(post.tool)}
             </span>
           </div>

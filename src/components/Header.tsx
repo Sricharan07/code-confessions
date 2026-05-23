@@ -43,7 +43,7 @@ export function Header() {
         <div className={isV2 ? "flex gap-10 whitespace-nowrap animate-[scroll_40s_linear_infinite] font-sans text-[13px] font-bold uppercase tracking-wider" : "marquee-track"}>
           {Array.from({ length: 4 }).map((_, i) => (
             <span key={i} className="flex gap-10">
-              <span>POST THE WORST THING AI DID TO YOUR CODE</span>
+              <span className="bg-hot px-1.5 py-0.5 rounded-sm">POST THE WORST THING AI DID TO YOUR CODE</span>
               <span>·</span>
               <span>NO LOGINS · NO JUDGMENT · ONLY PAIN</span>
               <span>·</span>
