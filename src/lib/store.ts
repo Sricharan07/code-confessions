@@ -166,14 +166,12 @@ let feedTab: "for-you" | "following" | "my-posts" | "saved-posts" = "for-you";
 let theme: Theme = "system";
 let initialized = false;
 const listeners = new Set<() => void>();
-let loading = true;
 let latestSnapshot = {
   posts: [] as Post[],
   comments: [] as Comment[],
   user: null as any,
   feedTab: "for-you" as "for-you" | "following" | "my-posts" | "saved-posts",
-  theme: "system" as Theme,
-  loading: true
+  theme: "system" as Theme
 };
 
 export function getAvatarUrl(seed: string) {
@@ -324,12 +322,9 @@ function init() {
       if (Array.isArray(commentsData)) {
         comments = commentsData.map(mapCommentFromDb);
       }
-      loading = false;
       persist();
     } catch (err) {
       console.error("Failed to load initial data:", err);
-      loading = false;
-      persist();
     }
   })();
 
@@ -362,7 +357,7 @@ function persist() {
       console.error("Failed to save theme to localStorage:", e);
     }
   }
-  latestSnapshot = { posts, comments, user, feedTab, theme, loading };
+  latestSnapshot = { posts, comments, user, feedTab, theme };
   listeners.forEach((l) => l());
 }
 
@@ -377,7 +372,7 @@ function snapshot() {
   return latestSnapshot;
 }
 
-const serverSnapshot = { posts: [] as Post[], comments: [] as Comment[], user: null as any, feedTab: "for-you" as const, theme: "system" as const, loading: true };
+const serverSnapshot = { posts: [] as Post[], comments: [] as Comment[], user: null as any, feedTab: "for-you" as const, theme: "system" as const };
 
 export function useStore() {
   return useSyncExternalStore(subscribe, snapshot, () => serverSnapshot);
@@ -386,7 +381,7 @@ export function useStore() {
 export function setFeedTab(tab: "for-you" | "following" | "my-posts" | "saved-posts") {
   init();
   feedTab = tab;
-  latestSnapshot = { posts, comments, user, feedTab, theme, loading };
+  latestSnapshot = { posts, comments, user, feedTab, theme };
   listeners.forEach((l) => l());
 }
 
