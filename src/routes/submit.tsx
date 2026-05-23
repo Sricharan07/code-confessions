@@ -538,7 +538,7 @@ function Submit() {
         </aside>
 
         {/* Form Container */}
-        <main className="flex-1 w-full max-w-[1130px] overflow-hidden p-4 sm:p-8 pb-24 md:pb-8 bg-paper">
+        <main className="flex-1 w-full max-w-[1130px] h-full overflow-y-auto p-4 sm:p-8 pb-24 md:pb-8 bg-paper">
           {renderContent()}
         </main>
       </div>

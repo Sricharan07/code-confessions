@@ -13,6 +13,7 @@ import { Route as SubmitRouteImport } from './routes/submit'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PostIdRouteImport } from './routes/post.$id'
+import { Route as EditIdRouteImport } from './routes/edit.$id'
 
 const SubmitRoute = SubmitRouteImport.update({
   id: '/submit',
@@ -34,17 +35,24 @@ const PostIdRoute = PostIdRouteImport.update({
   path: '/post/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EditIdRoute = EditIdRouteImport.update({
+  id: '/edit/$id',
+  path: '/edit/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/submit': typeof SubmitRoute
+  '/edit/$id': typeof EditIdRoute
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/submit': typeof SubmitRoute
+  '/edit/$id': typeof EditIdRoute
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRoutesById {
@@ -52,20 +60,22 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/submit': typeof SubmitRoute
+  '/edit/$id': typeof EditIdRoute
   '/post/$id': typeof PostIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/admin' | '/submit' | '/post/$id'
+  fullPaths: '/' | '/admin' | '/submit' | '/edit/$id' | '/post/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/submit' | '/post/$id'
-  id: '__root__' | '/' | '/admin' | '/submit' | '/post/$id'
+  to: '/' | '/admin' | '/submit' | '/edit/$id' | '/post/$id'
+  id: '__root__' | '/' | '/admin' | '/submit' | '/edit/$id' | '/post/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   SubmitRoute: typeof SubmitRoute
+  EditIdRoute: typeof EditIdRoute
   PostIdRoute: typeof PostIdRoute
 }
 
@@ -99,6 +109,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PostIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/edit/$id': {
+      id: '/edit/$id'
+      path: '/edit/$id'
+      fullPath: '/edit/$id'
+      preLoaderRoute: typeof EditIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -106,6 +123,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   SubmitRoute: SubmitRoute,
+  EditIdRoute: EditIdRoute,
   PostIdRoute: PostIdRoute,
 }
 export const routeTree = rootRouteImport

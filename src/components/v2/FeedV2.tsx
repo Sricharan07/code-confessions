@@ -604,18 +604,6 @@ function PostCard({ post, comments, onImageClick }: { post: any; comments: any[]
   const [newCommentBody, setNewCommentBody] = useState("");
   const [submittingComment, setSubmittingComment] = useState(false);
 
-  // Editing state
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedTitle, setEditedTitle] = useState(post.title);
-  const [editedBody, setEditedBody] = useState(post.body);
-  const [editedTool, setEditedTool] = useState(post.tool);
-  const [editedVibe, setEditedVibe] = useState(post.vibe || "");
-  const [editedVerdict, setEditedVerdict] = useState(post.verdict || "still_broken");
-  const [editedPlea, setEditedPlea] = useState(post.plea || "");
-  const [editedAiDefense, setEditedAiDefense] = useState(post.aiDefense || "");
-  const [editedCrimeSceneImage, setEditedCrimeSceneImage] = useState<string | null>(post.crimeSceneImage || null);
-  const [editedAiDefenseImage, setEditedAiDefenseImage] = useState<string | null>(post.aiDefenseImage || null);
-  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Kebab Menu & Report states
   const [showPostMenu, setShowPostMenu] = useState(false);
@@ -630,29 +618,6 @@ function PostCard({ post, comments, onImageClick }: { post: any; comments: any[]
     (user.username && post.author.toLowerCase() === user.username.toLowerCase())
   ));
 
-  const handleSaveEdit = async () => {
-    if (!editedTitle.trim() || !editedBody.trim() || isSavingEdit) return;
-    setIsSavingEdit(true);
-    try {
-      await updatePost(post.id, {
-        title: editedTitle.trim(),
-        body: editedBody.trim(),
-        tool: editedTool,
-        vibe: editedVibe || null,
-        verdict: editedVerdict,
-        plea: editedPlea || null,
-        aiDefense: editedAiDefense.trim() || null,
-        crimeSceneImage: editedCrimeSceneImage,
-        aiDefenseImage: editedAiDefenseImage,
-      });
-      setIsEditing(false);
-    } catch (err) {
-      console.error("Failed to update post:", err);
-      alert("Failed to save changes. Please try again.");
-    } finally {
-      setIsSavingEdit(false);
-    }
-  };
 
   const handleDeletePost = async () => {
     if (!window.confirm("Are you sure you want to delete this confession forever? This cannot be undone.")) return;
@@ -749,17 +714,8 @@ function PostCard({ post, comments, onImageClick }: { post: any; comments: any[]
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setEditedTitle(post.title);
-                              setEditedBody(post.body);
-                              setEditedTool(post.tool);
-                              setEditedVibe(post.vibe || "");
-                              setEditedVerdict(post.verdict || "still_broken");
-                              setEditedPlea(post.plea || "");
-                              setEditedAiDefense(post.aiDefense || "");
-                              setEditedCrimeSceneImage(post.crimeSceneImage || null);
-                              setEditedAiDefenseImage(post.aiDefenseImage || null);
-                              setIsEditing(true);
                               setShowPostMenu(false);
+                              router.navigate({ to: `/edit/${post.id}` });
                             }}
                             className="w-full text-left px-3.5 py-2.5 text-[13px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
                           >
@@ -798,120 +754,60 @@ function PostCard({ post, comments, onImageClick }: { post: any; comments: any[]
             </div>
           )}
         </div>
-        
-        {isEditing ? (
-          <div className="space-y-4 mt-2 bg-zinc-50 dark:bg-zinc-900/10 p-5 rounded-2xl border border-zinc-200/20 dark:border-zinc-800/40">
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Confession Title</label>
-              <input
-                type="text"
-                value={editedTitle}
-                onChange={(e) => setEditedTitle(e.target.value)}
-                className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 px-3 py-1.5 rounded-xl text-[14px] font-bold text-ink dark:text-zinc-100 placeholder-muted-foreground focus:outline-none focus:border-hot dark:focus:border-hot"
-                placeholder="Title your disaster..."
+            <div className="text-[15px] leading-relaxed text-ink/95 dark:text-zinc-200">
+          <h4 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 leading-snug mb-1">{post.title}</h4>
+          <p className="text-ink/80 dark:text-zinc-300 font-normal mb-1">{post.body}</p>
+
+          {/* Crime Scene Image Media (Reddit/X/Substack Style) */}
+          {post.crimeSceneImage && (
+            <div className="mt-3.5 overflow-hidden rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center shadow-sm max-w-full">
+              <img 
+                src={post.crimeSceneImage} 
+                alt="Crime scene" 
+                onClick={() => onImageClick(post.crimeSceneImage)}
+                className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in" 
+                loading="lazy"
               />
             </div>
-            
-            <SuspectPicker value={editedTool} onChange={setEditedTool} />
+          )}
 
-            <CrimeSceneTextarea
-              value={editedBody}
-              onChange={setEditedBody}
-              image={editedCrimeSceneImage}
-              onImageChange={setEditedCrimeSceneImage}
-            />
-
-            <div className="border-t border-ink/10 dark:border-zinc-800/50 pt-4 space-y-4">
-              <VibePicker value={editedVibe} onChange={setEditedVibe} />
-              <VerdictPicker value={editedVerdict} onChange={setEditedVerdict} />
-              <PleaPicker value={editedPlea} onChange={setEditedPlea} />
-            </div>
-
-            <div className="border-t border-ink/10 dark:border-zinc-800/50 pt-4">
-              <AIDefenseInput
-                value={editedAiDefense}
-                onChange={setEditedAiDefense}
-                image={editedAiDefenseImage}
-                onImageChange={setEditedAiDefenseImage}
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end pt-2 border-t border-ink/10 dark:border-zinc-800/50">
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditing(false);
-                }}
-                className="px-4 py-1.5 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors uppercase tracking-wider text-ink dark:text-zinc-300"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={isSavingEdit || !editedTitle.trim() || !editedBody.trim()}
-                onClick={handleSaveEdit}
-                className="px-5 py-1.5 bg-hot text-paper text-[11px] font-bold rounded-full hover:bg-hot/90 disabled:opacity-50 transition-colors uppercase tracking-wider shadow-sm cursor-pointer"
-              >
-                {isSavingEdit ? "Saving..." : "Save Changes"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="text-[15px] leading-relaxed text-ink/95 dark:text-zinc-200">
-            <h4 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 leading-snug mb-1">{post.title}</h4>
-            <p className="text-ink/80 dark:text-zinc-300 font-normal mb-1">{post.body}</p>
-
-            {/* Crime Scene Image Media (Reddit/X/Substack Style) */}
-            {post.crimeSceneImage && (
-              <div className="mt-3.5 overflow-hidden rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center shadow-sm max-w-full">
-                <img 
-                  src={post.crimeSceneImage} 
-                  alt="Crime scene" 
-                  onClick={() => onImageClick(post.crimeSceneImage)}
-                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in" 
-                  loading="lazy"
-                />
+          {/* AI Defense & Proof Image Section */}
+          {post.aiDefense && (
+            <div className="mt-3.5 p-4 bg-zinc-50/50 dark:bg-zinc-900/10 rounded-2xl border border-zinc-200/30 dark:border-zinc-800/30">
+              <div className="text-[10px] uppercase font-extrabold text-hot tracking-widest mb-1.5 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 bg-hot rounded-full"></span>
+                AI&apos;s Defense
               </div>
-            )}
-
-            {/* AI Defense & Proof Image Section */}
-            {post.aiDefense && (
-              <div className="mt-3.5 p-4 bg-zinc-50/50 dark:bg-zinc-900/10 rounded-2xl border border-zinc-200/30 dark:border-zinc-800/30">
-                <div className="text-[10px] uppercase font-extrabold text-hot tracking-widest mb-1.5 flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 bg-hot rounded-full"></span>
-                  AI&apos;s Defense
+              <p className="text-[13px] text-ink/75 dark:text-zinc-400 italic leading-relaxed font-normal">
+                &ldquo;{post.aiDefense}&rdquo;
+              </p>
+              {post.aiDefenseImage && (
+                <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200/40 dark:border-zinc-800/50 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center max-w-full">
+                  <img 
+                    src={post.aiDefenseImage} 
+                    alt="AI defense proof" 
+                    onClick={() => onImageClick(post.aiDefenseImage)}
+                    className="max-h-[384px] w-full object-contain rounded-xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in"
+                    loading="lazy"
+                  />
                 </div>
-                <p className="text-[13px] text-ink/75 dark:text-zinc-400 italic leading-relaxed font-normal">
-                  &ldquo;{post.aiDefense}&rdquo;
-                </p>
-                {post.aiDefenseImage && (
-                  <div className="mt-3 overflow-hidden rounded-xl border border-zinc-200/40 dark:border-zinc-800/50 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center max-w-full">
-                    <img 
-                      src={post.aiDefenseImage} 
-                      alt="AI defense proof" 
-                      onClick={() => onImageClick(post.aiDefenseImage)}
-                      className="max-h-[384px] w-full object-contain rounded-xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in"
-                      loading="lazy"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+              )}
+            </div>
+          )}
 
-            {/* Generated Meme Image Media */}
-            {post.memeUrl && (
-              <div className="mt-3.5 overflow-hidden rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center shadow-sm max-w-full">
-                <img 
-                  src={post.memeUrl} 
-                  alt="Confession meme" 
-                  onClick={() => onImageClick(post.memeUrl)}
-                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in"
-                  loading="lazy"
-                />
-              </div>
-            )}
-          </div>
-        )}
+          {/* Generated Meme Image Media */}
+          {post.memeUrl && (
+            <div className="mt-3.5 overflow-hidden rounded-2xl border border-zinc-200/50 dark:border-zinc-800/80 bg-zinc-950/5 dark:bg-zinc-950/30 flex justify-center items-center shadow-sm max-w-full">
+              <img 
+                src={post.memeUrl} 
+                alt="Confession meme" 
+                onClick={() => onImageClick(post.memeUrl)}
+                className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in"
+                loading="lazy"
+              />
+            </div>
+          )}
+        </div>
         
         {/* Modern Interactive Action Bar */}
         <div className="flex items-center justify-between mt-5 pt-3.5 border-t border-ink/5 dark:border-zinc-900/60 flex-wrap gap-4 select-none">
