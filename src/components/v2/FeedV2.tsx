@@ -35,6 +35,16 @@ export function FeedV2() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [activeLightboxImg]);
 
+  // Scroll main feed column to top when a specific post is clicked/highlighted
+  useEffect(() => {
+    if (search.post) {
+      const scrollContainer = document.querySelector("main.overflow-y-auto");
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    }
+  }, [search.post]);
+
   // Mock Notification logs for the Activity tab
   const mockActivities = [
     {
