@@ -46,45 +46,7 @@ export function FeedV2() {
   }, [search.post]);
 
   // Mock Notification logs for the Activity tab
-  const mockActivities = [
-    {
-      id: 1,
-      type: "reaction",
-      user: "anon-22aa",
-      action: "reacted 🔥 to your confession",
-      target: "Asked Gemini to add a loading spinner...",
-      time: "3h ago",
-      icon: FlameIcon,
-    },
-    {
-      id: 2,
-      type: "trending",
-      user: "System",
-      action: "Your confession is trending in Popular",
-      target: "Claude rewrote my entire auth flow...",
-      time: "5h ago",
-      icon: Sparkles,
-    },
-    {
-      id: 3,
-      type: "status",
-      user: "anon-ox91",
-      action: "marked their confession as",
-      target: "Claude rewrote my entire auth flow...",
-      time: "1d ago",
-      suffix: "SOLVED",
-      icon: CheckCircle2,
-    },
-    {
-      id: 4,
-      type: "follow",
-      user: "SeniorLlama",
-      action: "started following you",
-      target: "",
-      time: "2d ago",
-      icon: Heart,
-    },
-  ];
+  const mockActivities: any[] = [];
 
   // Follow suggestions and followers are dynamically clean
   const mockFollowSuggestions: any[] = [];
@@ -463,6 +425,13 @@ export function FeedV2() {
                 </div>
               );
             })}
+            {mockActivities.length === 0 && (
+              <div className="p-12 text-center text-muted-foreground flex flex-col items-center justify-center">
+                <Bell className="w-8 h-8 text-muted-foreground/60 mb-2" />
+                <h3 className="text-md font-bold text-ink dark:text-zinc-100 mb-1">No notifications yet</h3>
+                <p className="text-xs max-w-xs">When you get reactions, replies, or new followers, they'll show up here. Stay tuned!</p>
+              </div>
+            )}
           </div>
         )}
 
