@@ -85,11 +85,11 @@ export async function loginWithCredentials(username: string, password: string) {
   return data.user;
 }
 
-export async function signupWithCredentials(username: string, password: string) {
+export async function signupWithCredentials(username: string, displayName: string, password: string) {
   const res = await fetch(`${API_URL}/api/auth/signup`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username, displayName, password }),
   });
   const data = await res.json();
   if (!res.ok || data.error) {

@@ -65,7 +65,7 @@ function Submit() {
   const [authOpen, setAuthOpen] = useState(false);
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const { user, theme } = useStore();
-  const activeHandle = user ? user.username : sessionAuthor;
+  const activeHandle = user ? (user.displayName || user.username) : sessionAuthor;
   const router = useRouter();
 
   useEffect(() => {
@@ -142,7 +142,7 @@ function Submit() {
         }
       }
 
-      const post = await createPost({
+      createPost({
         title: headline.trim(),
         body: crimeScene.trim(),
         tool: suspect,
@@ -161,13 +161,7 @@ function Submit() {
       setCrimeSceneImage(null);
       setAiDefenseImage(null);
 
-      setSuccessData({
-        postId: post.id,
-        headline: post.title,
-        twitterMemeUrl,
-        instaMemeUrl,
-        author: post.author,
-      });
+      router.navigate({ to: "/" });
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || "Failed to submit the confession. Please try again.";
@@ -419,7 +413,7 @@ function Submit() {
         <div className="relative">
           {user ? (
             <img 
-              src={getAvatarUrl(user.username)} 
+              src={getAvatarUrl(user.displayName || user.username)} 
               alt="avatar" 
               onClick={() => setProfileMenuOpen(!profileMenuOpen)}
               className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 

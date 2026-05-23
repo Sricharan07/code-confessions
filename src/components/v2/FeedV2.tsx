@@ -21,6 +21,19 @@ export function FeedV2() {
   const [exploreSubTab, setExploreSubTab] = useState("for-you");
   const [followedAccounts, setFollowedAccounts] = useState<string[]>([]);
   const [followingSubTab, setFollowingSubTab] = useState<"following" | "followers">("following");
+  const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveLightboxImg(null);
+      }
+    };
+    if (activeLightboxImg) {
+      window.addEventListener("keydown", handleKeyDown);
+    }
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [activeLightboxImg]);
 
   // Mock Notification logs for the Activity tab
   const mockActivities = [
@@ -84,7 +97,11 @@ export function FeedV2() {
       }
       
       if (activeTab === "my-posts") {
-        return user && p.author === user.username;
+        return user && (
+          (p.authorSessionId && p.authorSessionId === user.id) ||
+          (user.displayName && p.author === user.displayName) ||
+          (user.username && p.author === user.username)
+        );
       }
 
       if (activeTab === "saved-posts") {
@@ -646,6 +663,28 @@ export function FeedV2() {
           </>
         )}
       </div>
+      {activeLightboxImg && (
+        <div 
+          onClick={() => setActiveLightboxImg(null)}
+          className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm flex flex-col justify-center items-center p-4 select-none cursor-zoom-out animate-in fade-in duration-200"
+        >
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setActiveLightboxImg(null);
+            }}
+            className="absolute top-4 right-4 p-2 bg-zinc-900/80 hover:bg-zinc-800 hover:scale-105 border border-zinc-800 text-white rounded-full transition-all cursor-pointer z-55"
+          >
+            <X className="w-6 h-6" />
+          </button>
+          <img 
+            src={activeLightboxImg} 
+            alt="Expanded view" 
+            onClick={(e) => e.stopPropagation()}
+            className="max-h-[90vh] max-w-full object-contain rounded-lg shadow-2xl animate-in zoom-in-95 duration-200 cursor-default"
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -710,6 +749,13 @@ function PostCard({
   const [isEditing, setIsEditing] = useState(false);
   const [editedTitle, setEditedTitle] = useState(post.title);
   const [editedBody, setEditedBody] = useState(post.body);
+  const [editedTool, setEditedTool] = useState(post.tool);
+  const [editedVibe, setEditedVibe] = useState(post.vibe || "");
+  const [editedVerdict, setEditedVerdict] = useState(post.verdict || "still_broken");
+  const [editedPlea, setEditedPlea] = useState(post.plea || "");
+  const [editedAiDefense, setEditedAiDefense] = useState(post.aiDefense || "");
+  const [editedCrimeSceneImage, setEditedCrimeSceneImage] = useState<string | null>(post.crimeSceneImage || null);
+  const [editedAiDefenseImage, setEditedAiDefenseImage] = useState<string | null>(post.aiDefenseImage || null);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
 
   // Kebab Menu & Report states
@@ -720,8 +766,9 @@ function PostCard({
   const [reportSuccessToast, setReportSuccessToast] = useState(false);
 
   const isAuthor = !!(user && (
-    (user.username && post.author.toLowerCase() === user.username.toLowerCase()) || 
-    (post.authorSessionId && post.authorSessionId === user.id)
+    (post.authorSessionId && post.authorSessionId === user.id) ||
+    (user.displayName && post.author.toLowerCase() === user.displayName.toLowerCase()) ||
+    (user.username && post.author.toLowerCase() === user.username.toLowerCase())
   ));
 
   const handleSaveEdit = async () => {
@@ -737,6 +784,13 @@ function PostCard({
       await updatePost(post.id, {
         title: editedTitle.trim(),
         body: editedBody.trim(),
+        tool: editedTool,
+        vibe: editedVibe || null,
+        verdict: editedVerdict,
+        plea: editedPlea || null,
+        aiDefense: editedAiDefense.trim() || null,
+        crimeSceneImage: editedCrimeSceneImage,
+        aiDefenseImage: editedAiDefenseImage,
       });
       setIsEditing(false);
     } catch (err) {
@@ -915,6 +969,15 @@ function PostCard({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
+                              setEditedTitle(post.title);
+                              setEditedBody(post.body);
+                              setEditedTool(post.tool);
+                              setEditedVibe(post.vibe || "");
+                              setEditedVerdict(post.verdict || "still_broken");
+                              setEditedPlea(post.plea || "");
+                              setEditedAiDefense(post.aiDefense || "");
+                              setEditedCrimeSceneImage(post.crimeSceneImage || null);
+                              setEditedAiDefenseImage(post.aiDefenseImage || null);
                               setIsEditing(true);
                               setShowPostMenu(false);
                             }}
@@ -957,9 +1020,9 @@ function PostCard({
         </div>
         
         {isEditing ? (
-          <div className="space-y-3.5 mt-2 bg-zinc-50 dark:bg-zinc-900/10 p-4 rounded-2xl border border-zinc-200/20 dark:border-zinc-800/40">
+          <div className="space-y-4 mt-2 bg-zinc-50 dark:bg-zinc-900/10 p-5 rounded-2xl border border-zinc-200/20 dark:border-zinc-800/40">
             <div className="space-y-1">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Confession Title</label>
+              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider block">Confession Title</label>
               <input
                 type="text"
                 value={editedTitle}
@@ -968,25 +1031,38 @@ function PostCard({
                 placeholder="Title your disaster..."
               />
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">Crime Scene Description</label>
-              <textarea
-                value={editedBody}
-                onChange={(e) => setEditedBody(e.target.value)}
-                rows={3}
-                className="w-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 px-3 py-2 rounded-xl text-[13px] font-normal text-ink dark:text-zinc-300 placeholder-muted-foreground focus:outline-none focus:border-hot dark:focus:border-hot"
-                placeholder="What did the AI do to your code?"
+            
+            <SuspectPicker value={editedTool} onChange={setEditedTool} />
+
+            <CrimeSceneTextarea
+              value={editedBody}
+              onChange={setEditedBody}
+              image={editedCrimeSceneImage}
+              onImageChange={setEditedCrimeSceneImage}
+            />
+
+            <div className="border-t border-ink/10 dark:border-zinc-800/50 pt-4 space-y-4">
+              <VibePicker value={editedVibe} onChange={setEditedVibe} />
+              <VerdictPicker value={editedVerdict} onChange={setEditedVerdict} />
+              <PleaPicker value={editedPlea} onChange={setEditedPlea} />
+            </div>
+
+            <div className="border-t border-ink/10 dark:border-zinc-800/50 pt-4">
+              <AIDefenseInput
+                value={editedAiDefense}
+                onChange={setEditedAiDefense}
+                image={editedAiDefenseImage}
+                onImageChange={setEditedAiDefenseImage}
               />
             </div>
-            <div className="flex gap-2 justify-end">
+
+            <div className="flex gap-2 justify-end pt-2 border-t border-ink/10 dark:border-zinc-800/50">
               <button
                 type="button"
                 onClick={() => {
                   setIsEditing(false);
-                  setEditedTitle(post.title);
-                  setEditedBody(post.body);
                 }}
-                className="px-3 py-1.5 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors uppercase tracking-wider text-ink dark:text-zinc-300"
+                className="px-4 py-1.5 border border-zinc-200 dark:border-zinc-800 text-[11px] font-bold rounded-full hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors uppercase tracking-wider text-ink dark:text-zinc-300"
               >
                 Cancel
               </button>
@@ -994,7 +1070,7 @@ function PostCard({
                 type="button"
                 disabled={isSavingEdit || !editedTitle.trim() || !editedBody.trim()}
                 onClick={handleSaveEdit}
-                className="px-4 py-1.5 bg-hot text-paper text-[11px] font-bold rounded-full hover:bg-hot/90 disabled:opacity-50 transition-colors uppercase tracking-wider shadow-sm cursor-pointer"
+                className="px-5 py-1.5 bg-hot text-paper text-[11px] font-bold rounded-full hover:bg-hot/90 disabled:opacity-50 transition-colors uppercase tracking-wider shadow-sm cursor-pointer"
               >
                 {isSavingEdit ? "Saving..." : "Save Changes"}
               </button>
@@ -1011,7 +1087,8 @@ function PostCard({
                 <img 
                   src={post.crimeSceneImage} 
                   alt="Crime scene" 
-                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300" 
+                  onClick={() => onImageClick(post.crimeSceneImage)}
+                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in" 
                   loading="lazy"
                 />
               </div>
@@ -1032,7 +1109,8 @@ function PostCard({
                     <img 
                       src={post.aiDefenseImage} 
                       alt="AI defense proof" 
-                      className="max-h-[384px] w-full object-contain rounded-xl hover:scale-[1.005] transition-all duration-300"
+                      onClick={() => onImageClick(post.aiDefenseImage)}
+                      className="max-h-[384px] w-full object-contain rounded-xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in"
                       loading="lazy"
                     />
                   </div>
@@ -1046,7 +1124,8 @@ function PostCard({
                 <img 
                   src={post.memeUrl} 
                   alt="Confession meme" 
-                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300"
+                  onClick={() => onImageClick(post.memeUrl)}
+                  className="max-h-[512px] w-full object-contain rounded-2xl hover:scale-[1.005] transition-all duration-300 cursor-zoom-in"
                   loading="lazy"
                 />
               </div>
@@ -1290,18 +1369,23 @@ function CommentItem({ comment, post, onReplyClick }: { comment: any; post: any;
 
   // Check if I am the comment author
   const isMyComment = !!(user && (
-    (user.username && comment.author.toLowerCase() === user.username.toLowerCase()) ||
-    (comment.authorSessionId && comment.authorSessionId === user.id)
+    (comment.authorSessionId && comment.authorSessionId === user.id) ||
+    (user.displayName && comment.author.toLowerCase() === user.displayName.toLowerCase()) ||
+    (user.username && comment.author.toLowerCase() === user.username.toLowerCase())
   ));
 
   // Check if I am the post owner (so I can moderate any comments on my post)
   const isPostOwner = !!(user && (
-    (user.username && post.author.toLowerCase() === user.username.toLowerCase()) ||
-    (post.authorSessionId && post.authorSessionId === user.id)
+    (post.authorSessionId && post.authorSessionId === user.id) ||
+    (user.displayName && post.author.toLowerCase() === user.displayName.toLowerCase()) ||
+    (user.username && post.author.toLowerCase() === user.username.toLowerCase())
   ));
 
   // Check if this comment is a reply to MY comment (contains my username or my handle)
-  const isReplyToMyComment = !!(user && user.username && comment.body.includes(`@${user.username}`));
+  const isReplyToMyComment = !!(user && (
+    (user.displayName && comment.body.includes(`@${user.displayName}`)) ||
+    (user.username && comment.body.includes(`@${user.username}`))
+  ));
 
   // Who can delete this comment? Either the comment author, or the post owner, or if it replies to my comment!
   const canDelete = isMyComment || isPostOwner || isReplyToMyComment;
