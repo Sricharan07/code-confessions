@@ -22,7 +22,7 @@ export function SidebarV2() {
 
   return (
     <>
-      <div className="flex flex-col h-full justify-between pt-4 pb-8 w-full px-2 md:px-4">
+      <div className="flex flex-col h-full justify-between pt-4 pb-8 w-full px-2 md:px-4 overflow-y-auto">
         <div>
           <Link to="/" className="flex items-center mb-6 w-fit hover:opacity-80 transition-opacity">
             <span className="font-bold text-[24px] tracking-tight text-ink dark:text-zinc-50">
