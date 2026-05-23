@@ -118,10 +118,10 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="flex flex-col h-dvh overflow-hidden">
+      <div className={`flex flex-col ${isV2 ? 'h-dvh overflow-hidden' : 'min-h-screen bg-paper dark:bg-zinc-950'}`}>
         <MigrationBanner />
         <Header />
-        <div className="flex-1 overflow-hidden">
+        <div className={`flex-1 ${isV2 ? 'overflow-hidden' : ''}`}>
           <Outlet />
         </div>
       </div>
