@@ -30,12 +30,12 @@ function EditPost() {
   }, [posts, post, router]);
 
   const [headline, setHeadline] = useState("");
-  const [suspect, setSuspect] = useState("other");
+  const [suspect, setSuspect] = useState<any>("other");
   const [crimeScene, setCrimeScene] = useState("");
-  const [vibe, setVibe] = useState("");
-  const [verdict, setVerdict] = useState("still_broken");
+  const [vibe, setVibe] = useState<any>("");
+  const [verdict, setVerdict] = useState<any>("still_broken");
   const [aiDefense, setAiDefense] = useState("");
-  const [plea, setPlea] = useState("");
+  const [plea, setPlea] = useState<any>("");
   const [crimeSceneImage, setCrimeSceneImage] = useState<string | null>(null);
   const [aiDefenseImage, setAiDefenseImage] = useState<string | null>(null);
 
@@ -146,14 +146,14 @@ function EditPost() {
       await updatePost(post.id, {
         title: headline.trim(),
         body: crimeScene.trim(),
-        tool: suspect,
-        vibe: vibe || null,
-        verdict,
-        plea: plea || null,
-        aiDefense: aiDefense.trim() || null,
-        memeUrl: twitterMemeUrl || null,
-        crimeSceneImage,
-        aiDefenseImage,
+        tool: suspect as any,
+        vibe: (vibe || undefined) as any,
+        verdict: verdict as any,
+        plea: (plea || undefined) as any,
+        aiDefense: (aiDefense.trim() || undefined) as any,
+        memeUrl: (twitterMemeUrl || undefined) as any,
+        crimeSceneImage: (crimeSceneImage || undefined) as any,
+        aiDefenseImage: (aiDefenseImage || undefined) as any,
       });
 
       router.navigate({ to: "/feed" });
@@ -199,92 +199,108 @@ function EditPost() {
           </span>
         </Link>
         
-        {/* Profile/Menu trigger */}
-        <div className="relative">
-          {user ? (
-            <img 
-              src={getAvatarUrl(user.displayName || user.username)} 
-              alt="avatar" 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
-            />
-          ) : (
-            <button 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 border border-ink/10 dark:border-zinc-800 rounded-full flex items-center justify-center text-ink/60 dark:text-zinc-400 cursor-pointer"
-            >
-              <User className="w-4 h-4 stroke-[2px]" />
-            </button>
-          )}
+        {/* Right side controls: Activity (Bell) button + Profile/Menu trigger */}
+        <div className="flex items-center gap-3.5">
+          <Link 
+            to="/feed"
+            search={{ tab: "activity" } as any}
+            className="p-1.5 hover:bg-ink/5 dark:hover:bg-zinc-900 text-muted-foreground hover:text-ink dark:hover:text-zinc-200 rounded-full transition-colors cursor-pointer shrink-0"
+            title="Activity"
+          >
+            <Bell className="w-5 h-5 stroke-[2px]" />
+          </Link>
 
-          {profileMenuOpen && (
-            <>
-              <div 
-                className="fixed inset-0 z-40 cursor-default" 
-                onClick={() => setProfileMenuOpen(false)}
+          <div className="relative">
+            {user ? (
+              <img 
+                src={getAvatarUrl(user.displayName || user.username)} 
+                alt="avatar" 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
               />
-              <div className="absolute right-0 top-10 w-60 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
-                <div className="px-1 py-1">
-                  <div className="text-[10px] text-muted-foreground dark:text-zinc-500 font-extrabold mb-2 uppercase tracking-widest">Theme</div>
-                  <div className="grid grid-cols-3 gap-1 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
-                    {[
-                      { key: "light", label: "Light", icon: Sun },
-                      { key: "dark", label: "Dark", icon: Moon },
-                      { key: "system", label: "System", icon: Monitor },
-                    ].map((t) => {
-                      const Icon = t.icon;
-                      const isActive = theme === t.key;
-                      return (
-                        <button
-                          key={t.key}
-                          onClick={() => setTheme(t.key as any)}
-                          className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all gap-1 cursor-pointer ${
-                            isActive
-                              ? "bg-white dark:bg-zinc-800 text-hot dark:text-zinc-50 shadow-sm border border-zinc-200/40 dark:border-zinc-700/50"
-                              : "text-muted-foreground hover:text-ink dark:hover:text-zinc-200"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="text-[9px] font-bold tracking-wide uppercase">{t.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
-                {user && !user.isGuest ? (
-                  <>
-                    <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
-                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.displayName || user.username}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">@{user.displayName || user.username}</div>
+            ) : (
+              <button 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 border border-ink/10 dark:border-zinc-800 rounded-full flex items-center justify-center text-ink/60 dark:text-zinc-400 cursor-pointer"
+              >
+                <User className="w-4 h-4 stroke-[2px]" />
+              </button>
+            )}
+
+            {profileMenuOpen && (
+              <>
+                <div 
+                  className="fixed inset-0 z-40 cursor-default" 
+                  onClick={() => setProfileMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-10 w-60 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
+                  <div className="px-1 py-1">
+                    <div className="text-[10px] text-muted-foreground dark:text-zinc-500 font-extrabold mb-2 uppercase tracking-widest">Theme</div>
+                    <div className="grid grid-cols-3 gap-1 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
+                      {[
+                        { key: "light", label: "Light", icon: Sun },
+                        { key: "dark", label: "Dark", icon: Moon },
+                        { key: "system", label: "System", icon: Monitor },
+                      ].map((t) => {
+                        const Icon = t.icon;
+                        const isActive = theme === t.key;
+                        return (
+                          <button
+                            key={t.key}
+                            onClick={() => setTheme(t.key as any)}
+                            className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all gap-1 cursor-pointer ${
+                              isActive
+                                ? "bg-white dark:bg-zinc-800 text-hot dark:text-zinc-50 shadow-sm border border-zinc-200/40 dark:border-zinc-700/50"
+                                : "text-muted-foreground hover:text-ink dark:hover:text-zinc-200"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span className="text-[9px] font-bold tracking-wide uppercase">{t.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                  </>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setProfileMenuOpen(false);
-                      setAuthOpen(true);
-                    }}
-                    className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
-                  >
-                    <User className="w-4 h-4 text-muted-foreground" />
-                    <span>Log In / Sign Up</span>
-                  </button>
-                )}
-              </div>
-            </>
-          )}
+                  </div>
+                  <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
+                  {user && !user.isGuest ? (
+                    <>
+                      <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
+                        <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.displayName || user.username}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">@{user.displayName || user.username}</div>
+                      </div>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setProfileMenuOpen(false);
+                        setAuthOpen(true);
+                      }}
+                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                    >
+                      <User className="w-4 h-4 text-muted-foreground" />
+                      <span>Log In / Sign Up</span>
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="w-full max-w-[1440px] flex flex-1 flex-row h-full overflow-hidden justify-center">
+      <div 
+        className="w-full flex flex-1 flex-row min-h-0 overflow-hidden"
+        style={{ paddingLeft: 'max(0px, (100vw - 1440px) / 2)' }}
+      >
         {/* Left Sidebar - Desktop (hidden on mobile) */}
-        <aside className="hidden md:flex w-[310px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
+        <aside className="hidden md:flex w-[310px] h-full flex-col bg-paper shrink-0 border-r border-ink/10 overflow-y-auto scrollbar-none">
           <SidebarV2 />
         </aside>
 
         {/* Form Container */}
-        <main className="flex-1 w-full max-w-[1130px] h-full overflow-y-auto p-4 sm:p-8 pb-24 md:pb-8 bg-paper">
+        <main className="flex-1 h-full overflow-y-auto pb-24 md:pb-8 bg-paper">
+          <div className="flex flex-row justify-start min-h-full">
+            <div className="flex-1 w-full max-w-[1130px] p-4 sm:p-8">
           <div className="mx-auto w-full max-w-[700px] px-1 pt-4 pb-20 space-y-8">
             <div className="text-center space-y-2">
               <span className="inline-block mb-2.5 font-sans text-[10px] uppercase bg-hot text-white px-2.5 py-0.5 font-bold rounded-full select-none shadow-sm tracking-wider">
@@ -319,7 +335,7 @@ function EditPost() {
                   01. The Confession
                 </div>
                 <HeadlineInput value={headline} onChange={setHeadline} />
-                <SuspectPicker value={suspect} onChange={setSuspect} />
+                <SuspectPicker value={suspect as any} onChange={setSuspect as any} />
                 <CrimeSceneTextarea
                   value={crimeScene}
                   onChange={setCrimeScene}
@@ -336,7 +352,7 @@ function EditPost() {
                   </div>
                 </div>
 
-                <VibePicker value={vibe} onChange={setVibe} />
+                <VibePicker value={vibe as any} onChange={setVibe as any} />
               </div>
 
               {/* Section 3: AI's Defense */}
@@ -384,7 +400,7 @@ function EditPost() {
               <h3 className="font-sans font-bold text-xs uppercase tracking-wider text-muted-foreground mb-4 text-center">Live Preview Card</h3>
               <MemeCard
                 headline={headline}
-                suspect={suspect}
+                suspect={suspect as any}
                 aiDefense={aiDefense}
                 author={activeHandle}
                 refInsta={refInsta}
@@ -395,8 +411,10 @@ function EditPost() {
               />
             </div>
           </div>
-        </main>
+        </div>
       </div>
+    </main>
+  </div>
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-paper/95 backdrop-blur-md border-t border-ink/10 flex items-center justify-around z-30 px-2 shadow-lg">

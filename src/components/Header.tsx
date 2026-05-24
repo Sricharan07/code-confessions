@@ -39,8 +39,8 @@ export function Header() {
           </button>
         </div>
       )}
-      <div className={isV2 ? "overflow-hidden bg-ink text-paper py-2" : "marquee"}>
-        <div className={isV2 ? "flex gap-10 whitespace-nowrap animate-[scroll_40s_linear_infinite] font-sans text-[13px] font-bold uppercase tracking-wider" : "marquee-track"}>
+      <div className={isV2 ? "overflow-hidden bg-ink text-paper py-1" : "marquee"}>
+        <div className={isV2 ? "flex gap-10 whitespace-nowrap animate-[scroll_40s_linear_infinite] font-sans text-[11px] font-bold uppercase tracking-wider" : "marquee-track"}>
           {Array.from({ length: 4 }).map((_, i) => (
             <span key={i} className="flex gap-10">
               <span className="bg-hot px-1.5 py-0.5 rounded-sm">POST THE WORST THING AI DID TO YOUR CODE</span>

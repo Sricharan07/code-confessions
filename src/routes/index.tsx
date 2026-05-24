@@ -59,10 +59,9 @@ function Index() {
         <div className="flex flex-wrap gap-4 pt-2 justify-start">
           <Link 
             to="/feed" 
-            className="px-6 py-3.5 bg-hot hover:bg-hot/95 text-white font-extrabold text-xs rounded-full transition-all uppercase tracking-wider shadow-sm flex items-center gap-2 cursor-pointer"
+            className="px-6 py-3.5 bg-hot hover:bg-hot/95 text-white font-extrabold text-xs rounded-full transition-all uppercase tracking-wider shadow-sm flex items-center justify-center cursor-pointer"
           >
             <span>Explore</span>
-            <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>

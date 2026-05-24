@@ -1,8 +1,8 @@
 import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent, vetContent, setAuthUser } from "@/lib/store";
 import { timeAgo } from "@/lib/store";
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
-import { useState, useEffect, useMemo } from "react";
-import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2, ArrowLeft, X } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2, ArrowLeft, X, RotateCw } from "lucide-react";
 import { AuthModalV2 } from "./AuthModalV2";
 
 export function FeedV2() {
@@ -24,6 +24,67 @@ export function FeedV2() {
   const [followingSubTab, setFollowingSubTab] = useState<"following" | "followers">("following");
   const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
   const [authOpen, setAuthOpen] = useState(false);
+
+  // Pull-to-refresh & Shuffle states
+  const [pullDelta, setPullDelta] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const [shuffleSeed, setShuffleSeed] = useState(0);
+  const pullStartYRef = useRef<number | null>(null);
+  const lastPostsLength = useRef(posts.length);
+
+  const handleRefreshAndShuffle = async () => {
+    setRefreshing(true);
+    const oldLength = posts.length;
+    try {
+      const { refreshFeed } = await import("@/lib/store");
+      await refreshFeed();
+      
+      // Give store a brief moment to update state
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    } catch (err) {
+      console.error("Refresh failed:", err);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (posts.length > lastPostsLength.current) {
+      // New posts came in! Reset shuffle to show newest posts first
+      setShuffleSeed(0);
+    } else if (posts.length === lastPostsLength.current && refreshing) {
+      // No new posts came in after a pull-to-refresh! Shuffle existing posts
+      setShuffleSeed(prev => prev + 1);
+    }
+    lastPostsLength.current = posts.length;
+  }, [posts, refreshing]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const scrollContainer = document.querySelector("main.overflow-y-auto");
+    if (scrollContainer && scrollContainer.scrollTop > 5) return;
+    pullStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (pullStartYRef.current === null || refreshing) return;
+    const currentY = e.touches[0].clientY;
+    const deltaY = currentY - pullStartYRef.current;
+    if (deltaY > 0) {
+      const resistance = 0.45;
+      const newDelta = Math.min(110, deltaY * resistance);
+      setPullDelta(newDelta);
+    }
+  };
+
+  const handleTouchEnd = () => {
+    if (pullStartYRef.current === null) return;
+    pullStartYRef.current = null;
+    if (pullDelta >= 65) {
+      handleRefreshAndShuffle();
+    }
+    setPullDelta(0);
+  };
+
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -105,10 +166,25 @@ export function FeedV2() {
   }, [search.post, posts]);
 
   const finalFeedPosts = useMemo(() => {
-    if (!highlightedPost) return visible;
-    const filtered = visible.filter((p) => p.id !== highlightedPost.id);
-    return [highlightedPost, ...filtered];
-  }, [visible, highlightedPost]);
+    let basePosts = visible;
+    if (highlightedPost) {
+      basePosts = visible.filter((p) => p.id !== highlightedPost.id);
+    }
+    
+    if (shuffleSeed > 0) {
+      const shuffled = [...basePosts];
+      // Deterministic sin-based seed shuffle to keep it extremely stable but randomized
+      let seed = shuffleSeed;
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const key = Math.abs(Math.sin(seed++) * 10000);
+        const j = Math.floor((key - Math.floor(key)) * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
+      return highlightedPost ? [highlightedPost, ...shuffled] : shuffled;
+    }
+    
+    return highlightedPost ? [highlightedPost, ...basePosts] : basePosts;
+  }, [visible, highlightedPost, shuffleSeed]);
 
   // Filter explore posts by search query (keyword OR username) or exploreSubTab curations
   const explorePosts = posts
@@ -155,7 +231,33 @@ export function FeedV2() {
   ];
 
   return (
-    <div className="flex flex-col h-full bg-paper">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="flex flex-col h-full bg-paper"
+    >
+      {/* Pull to Refresh Indicator */}
+      <div 
+        className="w-full flex items-center justify-center transition-all duration-200 overflow-hidden bg-zinc-50 dark:bg-zinc-950/20 shrink-0"
+        style={{ 
+          height: pullDelta > 0 || refreshing ? `${Math.max(refreshing ? 50 : 0, pullDelta)}px` : '0px',
+          opacity: pullDelta > 0 || refreshing ? 1 : 0
+        }}
+      >
+        <div className="flex items-center gap-2 py-3">
+          <RotateCw 
+            className={`w-5 h-5 text-hot stroke-[2.5px] ${refreshing ? 'animate-spin' : ''}`} 
+            style={{ 
+              transform: refreshing ? undefined : `rotate(${pullDelta * 5}deg)`,
+              transition: refreshing ? undefined : 'transform 0.1s linear'
+            }} 
+          />
+          <span className="text-[11px] font-extrabold uppercase tracking-wider text-hot">
+            {refreshing ? 'Refreshing disaster feed...' : pullDelta >= 65 ? 'Release to witness fails' : 'Pull to refresh'}
+          </span>
+        </div>
+      </div>
       
       {/* EXPLORE STICKY HEADER AND TABS LIKE X */}
       {activeTab === "explore" ? (
@@ -189,7 +291,7 @@ export function FeedV2() {
               >
                 {tab.label}
                 {exploreSubTab === tab.id && (
-                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-1 bg-hot rounded-t-full" />
+                  <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-hot rounded-t-full" />
                 )}
               </button>
             ))}
@@ -227,7 +329,7 @@ export function FeedV2() {
               ${(activeTab === "for-you" || !search.tab) ? "text-hot font-bold" : "text-muted-foreground font-medium"}`}
           >
             For you
-            {(activeTab === "for-you" || !search.tab) && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />}
+            {(activeTab === "for-you" || !search.tab) && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-hot rounded-t-full" />}
           </button>
           <button 
             onClick={() => router.navigate({ to: "/feed", search: { tab: "following" } as any })}
@@ -235,7 +337,7 @@ export function FeedV2() {
               ${activeTab === "following" ? "text-hot font-bold" : "text-muted-foreground font-medium"}`}
           >
             Following
-            {activeTab === "following" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />}
+            {activeTab === "following" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-hot rounded-t-full" />}
           </button>
           
           {user && !user.isGuest && (
@@ -245,7 +347,7 @@ export function FeedV2() {
                 ${activeTab === "my-posts" ? "text-hot font-bold" : "text-muted-foreground font-medium"}`}
             >
               My Fails
-              {activeTab === "my-posts" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />}
+              {activeTab === "my-posts" && <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-hot rounded-t-full" />}
             </button>
           )}
 
@@ -255,7 +357,7 @@ export function FeedV2() {
               className="flex-1 py-4 font-bold text-[15px] hover:bg-hot/5 hover:text-hot transition-colors relative text-hot font-bold"
             >
               Saved Fails
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-hot rounded-t-full" />
             </button>
           )}
         </div>
@@ -488,7 +590,7 @@ export function FeedV2() {
                     >
                       Following ({followedAccounts.length})
                       {followingSubTab === "following" && (
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-hot rounded-t-full" />
                       )}
                     </button>
                     <button
@@ -499,7 +601,7 @@ export function FeedV2() {
                     >
                       Followers ({mockFollowersList.length})
                       {followingSubTab === "followers" && (
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-1 bg-hot rounded-t-full" />
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-16 h-0.5 bg-hot rounded-t-full" />
                       )}
                     </button>
                   </div>
