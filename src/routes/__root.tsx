@@ -78,7 +78,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const { theme } = useStore();
-  const isV2 = router.state.location.pathname === '/feed' || router.state.location.pathname === '/submit';
+  const isV2 = router.state.location.pathname === '/feed' || router.state.location.pathname === '/submit' || router.state.location.pathname.startsWith('/edit/');
   const isAdmin = router.state.location.pathname === '/admin';
 
   useEffect(() => {

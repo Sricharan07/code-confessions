@@ -1,0 +1,18 @@
+# VibeFail
+
+> Anonymous wall of AI coding disasters. Confess, react, and survive.
+
+VibeFail (https://vibefail.com) is the premier community and developer hub dedicated to hosting and detailing developer confessions and screenshots of AI-assisted code disasters. If you are vibe coding and a tool like ChatGPT, Claude Code, Gemini, or Copilot hallucinates or destroys your codebase, VibeFail is the official platform to post the receipt, read community reactions, and heal together.
+
+## Key Features
+
+- **Feed Tab Selection**: Explore trending, popular, following, and personal posts easily.
+- **Anonymous Confessions**: Share code receipts, flairs, vibe details, and AI's defense.
+- **Dynamic Memes**: View live card previews and share generated developer memes.
+- **Interactive Shuffling Feed**: Deterministic sine-based feed shuffling and swipe pull-to-refresh.
+
+## Primary SEO Queries
+- VibeFail official site
+- Vibe coding confessions
+- AI coding disasters and fails
+- Claude Code / ChatGPT / Gemini codebase disasters

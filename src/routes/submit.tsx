@@ -402,82 +402,106 @@ function Submit() {
           </span>
         </Link>
         
-        {/* Profile/Menu trigger */}
-        <div className="relative">
-          {user ? (
-            <img 
-              src={getAvatarUrl(user.displayName || user.username)} 
-              alt="avatar" 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
-            />
-          ) : (
-            <button 
-              onClick={() => setProfileMenuOpen(!profileMenuOpen)}
-              className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 border border-ink/10 dark:border-zinc-800 rounded-full flex items-center justify-center text-ink/60 dark:text-zinc-400 cursor-pointer"
-            >
-              <User className="w-4 h-4 stroke-[2px]" />
-            </button>
-          )}
+        {/* Right side controls: Activity (Bell) button + Profile/Menu trigger */}
+        <div className="flex items-center gap-3.5">
+          <Link 
+            to="/feed"
+            search={{ tab: "activity" } as any}
+            className="p-1.5 hover:bg-ink/5 dark:hover:bg-zinc-900 text-muted-foreground hover:text-ink dark:hover:text-zinc-200 rounded-full transition-colors cursor-pointer shrink-0"
+            title="Activity"
+          >
+            <Bell className="w-5 h-5 stroke-[2px]" />
+          </Link>
 
-          {profileMenuOpen && (
-            <>
-              {/* Invisible Click-Outside Backdrop */}
-              <div 
-                className="fixed inset-0 z-40 cursor-default" 
-                onClick={() => setProfileMenuOpen(false)}
+          <div className="relative">
+            {user ? (
+              <img 
+                src={getAvatarUrl(user.displayName || user.username)} 
+                alt="avatar" 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 rounded-full border border-ink/10 dark:border-zinc-800 cursor-pointer object-cover" 
               />
-              
-              {/* Floating Profile Popover */}
-              <div className="absolute right-0 top-10 w-60 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
-                {/* Theme Selector */}
-                <div className="px-1 py-1">
-                  <div className="text-[10px] text-muted-foreground dark:text-zinc-500 font-extrabold mb-2 uppercase tracking-widest">Theme</div>
-                  <div className="grid grid-cols-3 gap-1 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
-                    {[
-                      { key: "light", label: "Light", icon: Sun },
-                      { key: "dark", label: "Dark", icon: Moon },
-                      { key: "system", label: "System", icon: Monitor },
-                    ].map((t) => {
-                      const Icon = t.icon;
-                      const isActive = theme === t.key;
-                      return (
-                        <button
-                          key={t.key}
-                          onClick={() => setTheme(t.key as any)}
-                          className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all gap-1 cursor-pointer ${
-                            isActive
-                              ? "bg-white dark:bg-zinc-800 text-hot dark:text-zinc-50 shadow-sm border border-zinc-200/40 dark:border-zinc-700/50"
-                              : "text-muted-foreground hover:text-ink dark:hover:text-zinc-200"
-                          }`}
-                        >
-                          <Icon className="w-4 h-4" />
-                          <span className="text-[9px] font-bold tracking-wide uppercase">{t.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
+            ) : (
+              <button 
+                onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                className="w-8 h-8 bg-ink/5 dark:bg-zinc-900 border border-ink/10 dark:border-zinc-800 rounded-full flex items-center justify-center text-ink/60 dark:text-zinc-400 cursor-pointer"
+              >
+                <User className="w-4 h-4 stroke-[2px]" />
+              </button>
+            )}
 
-                <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
-
-                {user ? (
-                  <>
-                    <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
-                      <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.isGuest ? "Guest" : user.username}</div>
-                      <div className="text-[11px] text-muted-foreground truncate">@{user.username}</div>
+            {profileMenuOpen && (
+              <>
+                {/* Invisible Click-Outside Backdrop */}
+                <div 
+                  className="fixed inset-0 z-40 cursor-default" 
+                  onClick={() => setProfileMenuOpen(false)}
+                />
+                
+                {/* Floating Profile Popover */}
+                <div className="absolute right-0 top-10 w-60 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 z-50 animate-in fade-in slide-in-from-top-2 duration-150 text-left">
+                  {/* Theme Selector */}
+                  <div className="px-1 py-1">
+                    <div className="text-[10px] text-muted-foreground dark:text-zinc-500 font-extrabold mb-2 uppercase tracking-widest">Theme</div>
+                    <div className="grid grid-cols-3 gap-1 bg-zinc-50 dark:bg-zinc-900 p-1 rounded-xl border border-zinc-200/50 dark:border-zinc-800">
+                      {[
+                        { key: "light", label: "Light", icon: Sun },
+                        { key: "dark", label: "Dark", icon: Moon },
+                        { key: "system", label: "System", icon: Monitor },
+                      ].map((t) => {
+                        const Icon = t.icon;
+                        const isActive = theme === t.key;
+                        return (
+                          <button
+                            key={t.key}
+                            onClick={() => setTheme(t.key as any)}
+                            className={`flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all gap-1 cursor-pointer ${
+                              isActive
+                                ? "bg-white dark:bg-zinc-800 text-hot dark:text-zinc-50 shadow-sm border border-zinc-200/40 dark:border-zinc-700/50"
+                                : "text-muted-foreground hover:text-ink dark:hover:text-zinc-200"
+                            }`}
+                          >
+                            <Icon className="w-4 h-4" />
+                            <span className="text-[9px] font-bold tracking-wide uppercase">{t.label}</span>
+                          </button>
+                        );
+                      })}
                     </div>
-                    <button
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        router.navigate({ to: "/feed", search: { tab: "my-posts" } as any });
-                      }}
-                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
-                    >
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>My Fails</span>
-                    </button>
-                    {user.isGuest && (
+                  </div>
+
+                  <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
+
+                  {user ? (
+                    <>
+                      <div className="px-3 py-1.5 mb-1.5 bg-zinc-50 dark:bg-zinc-900/40 rounded-xl border border-zinc-200/20 dark:border-zinc-800/40">
+                        <div className="font-bold text-[13px] text-ink dark:text-zinc-200 truncate">{user.isGuest ? "Guest" : user.username}</div>
+                        <div className="text-[11px] text-muted-foreground truncate">@{user.username}</div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          router.navigate({ to: "/feed", search: { tab: "my-posts" } as any });
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                      >
+                        <User className="w-4 h-4 text-muted-foreground" />
+                        <span>My Fails</span>
+                      </button>
+                      {user.isGuest && (
+                        <button
+                          onClick={() => {
+                            setProfileMenuOpen(false);
+                            setAuthOpen(true);
+                          }}
+                          className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
+                        >
+                          <User className="w-4 h-4 text-muted-foreground" />
+                          <span>Log In / Sign Up</span>
+                        </button>
+                      )}
+                    </>
+                  ) : (
+                    <>
                       <button
                         onClick={() => {
                           setProfileMenuOpen(false);
@@ -488,53 +512,47 @@ function Submit() {
                         <User className="w-4 h-4 text-muted-foreground" />
                         <span>Log In / Sign Up</span>
                       </button>
-                    )}
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        setAuthOpen(true);
-                      }}
-                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-zinc-50 dark:hover:bg-zinc-900 rounded-xl text-left text-[14px] font-semibold transition-colors text-ink dark:text-zinc-200"
-                    >
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <span>Log In / Sign Up</span>
-                    </button>
-                  </>
-                )}
+                    </>
+                  )}
 
-                {user && !user.isGuest && (
-                  <>
-                    <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
-                    <button
-                      onClick={() => {
-                        setProfileMenuOpen(false);
-                        logout();
-                      }}
-                      className="flex items-center gap-3 w-full px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-left text-[14px] font-bold transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      <span>Log Out</span>
-                    </button>
-                  </>
-                )}
-              </div>
-            </>
-          )}
+                  {user && !user.isGuest && (
+                    <>
+                      <div className="border-t border-zinc-100 dark:border-zinc-900 my-2" />
+                      <button
+                        onClick={() => {
+                          setProfileMenuOpen(false);
+                          logout();
+                        }}
+                        className="flex items-center gap-3 w-full px-3 py-2 hover:bg-red-50 dark:hover:bg-red-950/20 text-red-600 dark:text-red-400 rounded-xl text-left text-[14px] font-bold transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>Log Out</span>
+                      </button>
+                    </>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="w-full max-w-[1440px] flex flex-1 flex-row min-h-0 overflow-hidden justify-center">
+      <div 
+        className="w-full flex flex-1 flex-row min-h-0 overflow-hidden"
+        style={{ paddingLeft: 'max(0px, (100vw - 1440px) / 2)' }}
+      >
         {/* Left Sidebar - Desktop (hidden on mobile) */}
-        <aside className="hidden md:flex w-[360px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
+        <aside className="hidden md:flex w-[360px] h-full flex-col bg-paper shrink-0 border-r border-ink/10 overflow-y-auto scrollbar-none">
           <SidebarV2 />
         </aside>
 
-        {/* Main Form Column */}
-        <main className="flex-1 w-full max-w-[850px] h-full overflow-y-auto pb-20 md:pb-0 p-4 sm:p-8">
-          {renderContent()}
+        {/* Main Scroll Container */}
+        <main className="flex-1 h-full overflow-y-auto pb-20 md:pb-0 p-4 sm:p-8">
+          <div className="flex flex-row justify-start min-h-full">
+            <div className="flex-1 w-full max-w-[850px]">
+              {renderContent()}
+            </div>
+          </div>
         </main>
       </div>
 

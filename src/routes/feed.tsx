@@ -4,7 +4,7 @@ import { SidebarV2 } from "@/components/v2/SidebarV2";
 import { FeedV2 } from "@/components/v2/FeedV2";
 import { useStore, setAuthUser, getAvatarUrl, logout, setTheme, setFeedTab } from "@/lib/store";
 import { AuthModalV2 } from "@/components/v2/AuthModalV2";
-import { Home, TrendingUp, BookOpen, Compass, Bell, User, LogOut, Sun, Moon, Monitor, Bookmark } from "lucide-react";
+import { Home, TrendingUp, BookOpen, Compass, Bell, User, LogOut, Sun, Moon, Monitor, Bookmark, Plus } from "lucide-react";
 
 type FeedSearchParams = {
   tab?: string;
@@ -49,9 +49,9 @@ function V2Layout() {
   const navItems = [
     { label: "Home", icon: Home, to: "/feed", search: {} },
     { label: "Popular", icon: TrendingUp, to: "/feed", search: { tab: "popular" } },
+    { label: "Confess", icon: Plus, to: "/submit", search: {} },
     { label: "Following", icon: BookOpen, to: "/feed", search: { tab: "followers" } },
     { label: "Explore", icon: Compass, to: "/feed", search: { tab: "explore" } },
-    { label: "Activity", icon: Bell, to: "/feed", search: { tab: "activity" } },
   ];
 
   const handleMobileNavClick = (item: any, e: any) => {
@@ -84,13 +84,15 @@ function V2Layout() {
             VIBE<span className="bg-ink dark:bg-zinc-50 text-paper dark:text-zinc-950 px-1 ml-0.5 pb-0.5 rounded-sm">FAIL</span>
           </span>
         </Link>
-        {/* Right side controls: Confess button + Profile/Menu trigger */}
+        {/* Right side controls: Activity (Bell) button + Profile/Menu trigger */}
         <div className="flex items-center gap-3.5">
           <Link 
-            to="/submit"
-            className="px-3.5 py-1.5 bg-hot hover:bg-hot/90 text-paper text-xs font-extrabold rounded-full transition-all uppercase tracking-wider shrink-0 shadow-sm"
+            to="/feed"
+            search={{ tab: "activity" } as any}
+            className="p-1.5 hover:bg-ink/5 dark:hover:bg-zinc-900 text-muted-foreground hover:text-ink dark:hover:text-zinc-200 rounded-full transition-colors cursor-pointer shrink-0"
+            title="Activity"
           >
-            + Confess
+            <Bell className="w-5 h-5 stroke-[2px]" />
           </Link>
           
           <div className="relative">
@@ -229,94 +231,118 @@ function V2Layout() {
       </div>
     </header>
 
-      <div className="w-full max-w-[1440px] flex flex-1 flex-row min-h-0 overflow-hidden justify-center">
+      <div 
+        className="w-full flex flex-1 flex-row min-h-0 overflow-hidden"
+        style={{ paddingLeft: 'max(0px, (100vw - 1440px) / 2)' }}
+      >
         {/* Left Sidebar - Desktop (hidden on mobile) */}
-        <aside className="hidden md:flex w-[360px] h-full flex-col bg-paper shrink-0 border-r border-ink/10">
+        <aside className="hidden md:flex w-[360px] h-full flex-col bg-paper shrink-0 border-r border-ink/10 overflow-y-auto scrollbar-none">
           <SidebarV2 />
         </aside>
 
-        {/* Main Feed Column */}
-        <main className="flex-1 w-full max-w-[850px] border-r border-ink/10 h-full overflow-y-auto pb-20 md:pb-0">
-          <FeedV2 />
-        </main>
-        
-        {/* Right Column for large screens */}
-        <aside className="hidden lg:block w-[365px] shrink-0 h-full overflow-y-auto p-6 pl-8">
-          {(!user || user.isGuest) && (
-            <div className="bg-white dark:bg-zinc-950 border border-ink/5 dark:border-zinc-800/80 rounded-2xl p-6 text-center mb-8 shadow-sm">
-              <div className="mb-4 flex justify-center select-none">
-                <span className="font-bold text-[22px] tracking-tight text-ink dark:text-zinc-50">
-                  VIBE<span className="bg-ink dark:bg-zinc-50 text-paper dark:text-zinc-950 px-1.5 ml-0.5 pb-0.5 rounded-sm">FAIL</span>
-                </span>
-              </div>
-              <p className="font-extrabold text-[17px] mb-2 text-ink dark:text-zinc-50 leading-tight">Log in or sign up</p>
-              <p className="text-muted-foreground text-xs leading-relaxed mb-5">
-                Join the most chaotic and hilarious developer community. Share receipts, read code disasters, and feel less alone.
-              </p>
-              <Link 
-                to="/submit"
-                className="block w-full py-2 bg-hot hover:bg-hot/90 text-paper font-bold text-xs rounded-full transition-colors mb-2.5 shadow-sm uppercase tracking-wider text-center cursor-pointer"
-              >
-                Start Confessing
-              </Link>
-              <button 
-                onClick={() => setAuthOpen(true)}
-                className="w-full py-2 bg-ink dark:bg-zinc-800 text-paper dark:text-zinc-100 hover:opacity-90 font-bold text-xs rounded-full transition-colors border border-ink/10 uppercase tracking-wider"
-              >
-                Sign In
-              </button>
+        {/* Main Scroll Container */}
+        <main className="flex-1 h-full overflow-y-auto pb-20 md:pb-0">
+          <div className="flex flex-row justify-start min-h-full">
+            {/* Center Feed Column */}
+            <div className="flex-1 w-full max-w-[850px] border-r border-ink/10">
+              <FeedV2 />
             </div>
-          )}
-
-          <div className="p-1">
-            <h3 className="font-bold text-[12px] mb-4 text-muted-foreground uppercase tracking-widest border-b border-ink/5 dark:border-zinc-800/80 pb-2">Popular Confessions</h3>
-            <div className="space-y-5">
-              {popularConfessions.map((post) => {
-                const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
-                return (
+            
+            {/* Right Column for large screens */}
+            <aside className="hidden lg:block w-[365px] shrink-0 p-6 pl-8 sticky top-0 h-[calc(100vh-3.5rem)] overflow-y-auto scrollbar-none">
+              {(!user || user.isGuest) && (
+                <div className="bg-white dark:bg-zinc-950 border border-ink/5 dark:border-zinc-800/80 rounded-2xl p-6 text-center mb-8 shadow-sm">
+                  <div className="mb-4 flex justify-center select-none">
+                    <span className="font-bold text-[22px] tracking-tight text-ink dark:text-zinc-50">
+                      VIBE<span className="bg-ink dark:bg-zinc-50 text-paper dark:text-zinc-950 px-1.5 ml-0.5 pb-0.5 rounded-sm">FAIL</span>
+                    </span>
+                  </div>
+                  <p className="font-extrabold text-[17px] mb-2 text-ink dark:text-zinc-50 leading-tight">Log in or sign up</p>
+                  <p className="text-muted-foreground text-xs leading-relaxed mb-5">
+                    Join the most chaotic and hilarious developer community. Share receipts, read code disasters, and feel less alone.
+                  </p>
                   <Link 
-                    key={post.id} 
-                    to="/feed" 
-                    search={{ post: post.id }} 
-                    className="group block text-left"
+                    to="/submit"
+                    className="block w-full py-2 bg-hot hover:bg-hot/90 text-paper font-bold text-xs rounded-full transition-colors mb-2.5 shadow-sm uppercase tracking-wider text-center cursor-pointer"
                   >
-                    <div className="flex flex-col gap-1.5">
-                      <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider">
-                        <span className="text-hot">@{post.author}</span>
-                        <span>·</span>
-                        <span>{post.tool}</span>
-                      </div>
-                      
-                      <div className="flex justify-between items-start gap-3">
-                        <div className="flex-1">
-                          <p className="font-bold text-[14px] text-ink dark:text-zinc-100 group-hover:text-hot leading-snug line-clamp-2 transition-colors">
-                            {post.title}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
-                            <span>🔥 {totalReactions} reactions</span>
+                    Start Confessing
+                  </Link>
+                  <button 
+                    onClick={() => setAuthOpen(true)}
+                    className="w-full py-2 bg-ink dark:bg-zinc-800 text-paper dark:text-zinc-100 hover:opacity-90 font-bold text-xs rounded-full transition-colors border border-ink/10 uppercase tracking-wider"
+                  >
+                    Sign In
+                  </button>
+                </div>
+              )}
+
+              <div className="p-1">
+                <h3 className="font-bold text-[12px] mb-4 text-muted-foreground uppercase tracking-widest border-b border-ink/5 dark:border-zinc-800/80 pb-2">Popular Confessions</h3>
+                <div className="space-y-5">
+                  {popularConfessions.map((post) => {
+                    const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
+                    return (
+                      <Link 
+                        key={post.id} 
+                        to="/feed" 
+                        search={{ post: post.id }} 
+                        className="group block text-left"
+                      >
+                        <div className="flex flex-col gap-1.5">
+                          <div className="text-[11px] text-muted-foreground font-semibold flex items-center gap-1.5 uppercase tracking-wider">
+                            <span className="text-hot">@{post.author}</span>
                             <span>·</span>
-                            <span className="capitalize">{post.status}</span>
+                            <span>{post.tool}</span>
+                          </div>
+                          
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="flex-1">
+                              <p className="font-bold text-[14px] text-ink dark:text-zinc-100 group-hover:text-hot leading-snug line-clamp-2 transition-colors">
+                                {post.title}
+                              </p>
+                              <div className="flex items-center gap-2 mt-1 text-[11px] text-muted-foreground">
+                                <span>🔥 {totalReactions} reactions</span>
+                                <span>·</span>
+                                <span className="capitalize">{post.status}</span>
+                              </div>
+                            </div>
+                            
+                            <img 
+                              src={getAvatarUrl(post.author)} 
+                              alt={post.author} 
+                              className="w-10 h-10 bg-ink/5 dark:bg-zinc-800 rounded-lg border border-ink/5 dark:border-zinc-800 shrink-0 object-cover"
+                            />
                           </div>
                         </div>
-                        
-                        <img 
-                          src={getAvatarUrl(post.author)} 
-                          alt={post.author} 
-                          className="w-10 h-10 bg-ink/5 dark:bg-zinc-800 rounded-lg border border-ink/5 dark:border-zinc-800 shrink-0 object-cover"
-                        />
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </aside>
           </div>
-        </aside>
+        </main>
       </div>
 
       {/* Mobile Bottom Navigation Bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 h-16 bg-paper/95 backdrop-blur-md border-t border-ink/10 flex items-center justify-around z-30 px-2 shadow-lg">
         {navItems.map((item) => {
+          const isConfess = item.label === "Confess";
+          if (isConfess) {
+            return (
+              <Link
+                key={item.label}
+                to={item.to}
+                className="flex flex-col items-center justify-center flex-1 py-1 cursor-pointer shrink-0"
+              >
+                <div className="w-9 h-9 bg-hot rounded-full flex items-center justify-center shadow-md active:scale-95 hover:scale-105 transition-all">
+                  <item.icon className="w-5 h-5 stroke-[3px] text-white" />
+                </div>
+                <span className="text-[9px] mt-0.5 font-extrabold text-hot uppercase tracking-wider">Confess</span>
+              </Link>
+            );
+          }
+
           const isActive = 
             (item.label === "Home" && (activeTab === "for-you" || !search.tab)) ||
             (item.label === "Popular" && activeTab === "popular") ||
