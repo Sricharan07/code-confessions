@@ -1,8 +1,9 @@
-import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent, vetContent } from "@/lib/store";
+import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent, vetContent, setAuthUser } from "@/lib/store";
 import { timeAgo } from "@/lib/store";
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2, ArrowLeft, X } from "lucide-react";
+import { AuthModalV2 } from "./AuthModalV2";
 
 export function FeedV2() {
   const { posts, comments, user } = useStore();
@@ -22,6 +23,7 @@ export function FeedV2() {
   const [followedAccounts, setFollowedAccounts] = useState<string[]>([]);
   const [followingSubTab, setFollowingSubTab] = useState<"following" | "followers">("following");
   const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -287,9 +289,13 @@ export function FeedV2() {
               </div>
               
               {/* Follow Button */}
-              {user && user.username !== search.user && (
+              {(!user || user.username !== search.user) && (
                 <button
                   onClick={() => {
+                    if (!user || user.isGuest) {
+                      setAuthOpen(true);
+                      return;
+                    }
                     const handle = `@${search.user.toLowerCase()}`;
                     if (followedAccounts.includes(handle)) {
                       setFollowedAccounts(followedAccounts.filter(h => h !== handle));
@@ -339,6 +345,10 @@ export function FeedV2() {
                       </div>
                       <button 
                         onClick={() => {
+                          if (!user || user.isGuest) {
+                            setAuthOpen(true);
+                            return;
+                          }
                           if (isFollowed) {
                             setFollowedAccounts(followedAccounts.filter(h => h !== acc.handle));
                           } else {
@@ -375,6 +385,10 @@ export function FeedV2() {
                   comments={comments} 
                   followedAccounts={followedAccounts}
                   onFollowToggle={(handle) => {
+                    if (!user || user.isGuest) {
+                      setAuthOpen(true);
+                      return;
+                    }
                     if (followedAccounts.includes(handle)) {
                       setFollowedAccounts(followedAccounts.filter(h => h !== handle));
                     } else {
@@ -567,6 +581,10 @@ export function FeedV2() {
                             </div>
                             <button 
                               onClick={() => {
+                                if (!user || user.isGuest) {
+                                  setAuthOpen(true);
+                                  return;
+                                }
                                 if (isFollowing) {
                                   setFollowedAccounts(followedAccounts.filter(h => h !== details.handle));
                                 } else {
@@ -600,6 +618,10 @@ export function FeedV2() {
                     followedAccounts={followedAccounts}
                     hideFollowButton={!!search.user}
                     onFollowToggle={(handle) => {
+                      if (!user || user.isGuest) {
+                        setAuthOpen(true);
+                        return;
+                      }
                       if (followedAccounts.includes(handle)) {
                         setFollowedAccounts(followedAccounts.filter(h => h !== handle));
                       } else {
@@ -666,6 +688,7 @@ export function FeedV2() {
           />
         </div>
       )}
+      <AuthModalV2 isOpen={authOpen} onClose={() => setAuthOpen(false)} onLogin={setAuthUser} />
     </div>
   );
 }
