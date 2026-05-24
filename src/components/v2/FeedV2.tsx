@@ -1,8 +1,9 @@
-import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent, vetContent } from "@/lib/store";
+import { useStore, setFeedTab, getAvatarUrl, toggleReaction, hasReacted, REACTION_META, type Reaction, setStatus, addComment, toggleLikeComment, hasLikedComment, toggleSavePost, isPostSaved, updatePost, deletePost, deleteComment, reportContent, vetContent, setAuthUser } from "@/lib/store";
 import { timeAgo } from "@/lib/store";
 import { Link, useRouter, useSearch } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
-import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2, ArrowLeft } from "lucide-react";
+import { Search, Sparkles, Bell, Award, Heart, MessageSquare, AlertCircle, CheckCircle2, Flame, Settings, Bookmark, MoreHorizontal, Flag, Trash2, Edit2, ArrowLeft, X } from "lucide-react";
+import { AuthModalV2 } from "./AuthModalV2";
 
 export function FeedV2() {
   const { posts, comments, user } = useStore();
@@ -22,6 +23,7 @@ export function FeedV2() {
   const [followedAccounts, setFollowedAccounts] = useState<string[]>([]);
   const [followingSubTab, setFollowingSubTab] = useState<"following" | "followers">("following");
   const [activeLightboxImg, setActiveLightboxImg] = useState<string | null>(null);
+  const [authOpen, setAuthOpen] = useState(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -88,8 +90,8 @@ export function FeedV2() {
     })
     .sort((a, b) => {
       if (activeTab === "popular" || activeTab === "for-you") {
-        const sa = (Object.values(a.reactions) as number[]).reduce((x, y) => x + y, 0);
-        const sb = (Object.values(b.reactions) as number[]).reduce((x, y) => x + y, 0);
+        const sa = (Object.values(a.reactions || {}) as number[]).reduce((x, y) => x + y, 0);
+        const sb = (Object.values(b.reactions || {}) as number[]).reduce((x, y) => x + y, 0);
         if (activeTab === "popular") {
           return sb - sa;
         }
@@ -137,8 +139,8 @@ export function FeedV2() {
     })
     .sort((a, b) => {
       if (exploreSubTab === "trending" && !searchQuery.trim()) {
-        const sa = (Object.values(a.reactions) as number[]).reduce((x, y) => x + y, 0);
-        const sb = (Object.values(b.reactions) as number[]).reduce((x, y) => x + y, 0);
+        const sa = (Object.values(a.reactions || {}) as number[]).reduce((x, y) => x + y, 0);
+        const sb = (Object.values(b.reactions || {}) as number[]).reduce((x, y) => x + y, 0);
         return sb - sa;
       }
       return b.createdAt - a.createdAt;
@@ -287,9 +289,13 @@ export function FeedV2() {
               </div>
               
               {/* Follow Button */}
-              {user && user.username !== search.user && (
+              {(!user || user.username !== search.user) && (
                 <button
                   onClick={() => {
+                    if (!user || user.isGuest) {
+                      setAuthOpen(true);
+                      return;
+                    }
                     const handle = `@${search.user.toLowerCase()}`;
                     if (followedAccounts.includes(handle)) {
                       setFollowedAccounts(followedAccounts.filter(h => h !== handle));
@@ -339,6 +345,10 @@ export function FeedV2() {
                       </div>
                       <button 
                         onClick={() => {
+                          if (!user || user.isGuest) {
+                            setAuthOpen(true);
+                            return;
+                          }
                           if (isFollowed) {
                             setFollowedAccounts(followedAccounts.filter(h => h !== acc.handle));
                           } else {
@@ -375,12 +385,17 @@ export function FeedV2() {
                   comments={comments} 
                   followedAccounts={followedAccounts}
                   onFollowToggle={(handle) => {
+                    if (!user || user.isGuest) {
+                      setAuthOpen(true);
+                      return;
+                    }
                     if (followedAccounts.includes(handle)) {
                       setFollowedAccounts(followedAccounts.filter(h => h !== handle));
                     } else {
                       setFollowedAccounts([...followedAccounts, handle]);
                     }
                   }}
+                  onImageClick={setActiveLightboxImg}
                 />
               ))}
               {explorePosts.length === 0 && (
@@ -566,6 +581,10 @@ export function FeedV2() {
                             </div>
                             <button 
                               onClick={() => {
+                                if (!user || user.isGuest) {
+                                  setAuthOpen(true);
+                                  return;
+                                }
                                 if (isFollowing) {
                                   setFollowedAccounts(followedAccounts.filter(h => h !== details.handle));
                                 } else {
@@ -599,12 +618,17 @@ export function FeedV2() {
                     followedAccounts={followedAccounts}
                     hideFollowButton={!!search.user}
                     onFollowToggle={(handle) => {
+                      if (!user || user.isGuest) {
+                        setAuthOpen(true);
+                        return;
+                      }
                       if (followedAccounts.includes(handle)) {
                         setFollowedAccounts(followedAccounts.filter(h => h !== handle));
                       } else {
                         setFollowedAccounts([...followedAccounts, handle]);
                       }
                     }}
+                    onImageClick={setActiveLightboxImg}
                   />
                 ))}
                 {finalFeedPosts.length === 0 && (
@@ -664,6 +688,7 @@ export function FeedV2() {
           />
         </div>
       )}
+      <AuthModalV2 isOpen={authOpen} onClose={() => setAuthOpen(false)} onLogin={setAuthUser} />
     </div>
   );
 }
@@ -699,7 +724,8 @@ function PostCard({
   isHighlighted,
   followedAccounts = [],
   onFollowToggle,
-  hideFollowButton = false
+  hideFollowButton = false,
+  onImageClick
 }: { 
   post: any; 
   comments: any[]; 
@@ -708,9 +734,11 @@ function PostCard({
   followedAccounts?: string[];
   onFollowToggle?: (handle: string) => void;
   hideFollowButton?: boolean;
+  onImageClick: (url: string) => void;
 }) {
   const router = useRouter();
   const { user } = useStore();
+  const search = useSearch({ strict: false }) as any;
   const isAnon = post.author.toLowerCase().startsWith("anon-");
   const commentCount = comments.filter((c: any) => c.postId === post.id).length;
 
@@ -742,6 +770,15 @@ function PostCard({
   const handleDeletePost = async () => {
     if (!window.confirm("Are you sure you want to delete this confession forever? This cannot be undone.")) return;
     try {
+      if (search.post === post.id) {
+        await router.navigate({
+          to: "/feed",
+          search: (prev: any) => {
+            const { post, ...rest } = prev;
+            return rest;
+          },
+        });
+      }
       await deletePost(post.id);
     } catch (err) {
       console.error("Failed to delete post:", err);
@@ -875,74 +912,72 @@ function PostCard({
           </div>
 
           {/* Three Dots Post Dropdown Menu */}
-          {!isEditing && (
-            <div className="relative">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPostMenu(!showPostMenu);
-                }}
-                className="p-1.5 text-muted-foreground hover:text-ink dark:hover:text-zinc-250 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer shrink-0"
-                title="Post options"
-              >
-                <MoreHorizontal className="w-4.5 h-4.5" />
-              </button>
+          <div className="relative">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowPostMenu(!showPostMenu);
+              }}
+              className="p-1.5 text-muted-foreground hover:text-ink dark:hover:text-zinc-250 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors cursor-pointer shrink-0"
+              title="Post options"
+            >
+              <MoreHorizontal className="w-4.5 h-4.5" />
+            </button>
 
-              {showPostMenu && (
-                <>
-                  <div 
-                    className="fixed inset-0 z-20 cursor-default" 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setShowPostMenu(false);
-                    }} 
-                  />
-                  <div className="absolute right-0 top-full mt-1.5 w-40 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl z-35 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-100">
-                    <div className="py-1">
-                      {isAuthor ? (
-                        <>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowPostMenu(false);
-                              router.navigate({ to: `/edit/${post.id}` });
-                            }}
-                            className="w-full text-left px-3.5 py-2.5 text-[13px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
-                          >
-                            <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
-                            Edit Post
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setShowPostMenu(false);
-                              handleDeletePost();
-                            }}
-                            className="w-full text-left px-3.5 py-2.5 text-[13px] text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                            Delete Post
-                          </button>
-                        </>
-                      ) : (
+            {showPostMenu && (
+              <>
+                <div 
+                  className="fixed inset-0 z-20 cursor-default" 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowPostMenu(false);
+                  }} 
+                />
+                <div className="absolute right-0 top-full mt-1.5 w-40 rounded-xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-850 shadow-2xl z-35 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-100">
+                  <div className="py-1">
+                    {isAuthor ? (
+                      <>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setShowReportPostModal(true);
                             setShowPostMenu(false);
+                            router.navigate({ to: `/edit/${post.id}` });
                           }}
                           className="w-full text-left px-3.5 py-2.5 text-[13px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
                         >
-                          <Flag className="w-3.5 h-3.5 text-muted-foreground" />
-                          Report Post
+                          <Edit2 className="w-3.5 h-3.5 text-muted-foreground" />
+                          Edit Post
                         </button>
-                      )}
-                    </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowPostMenu(false);
+                            handleDeletePost();
+                          }}
+                          className="w-full text-left px-3.5 py-2.5 text-[13px] text-red-650 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          Delete Post
+                        </button>
+                      </>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setShowReportPostModal(true);
+                          setShowPostMenu(false);
+                        }}
+                        className="w-full text-left px-3.5 py-2.5 text-[13px] text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-900 transition-colors flex items-center gap-2 font-semibold cursor-pointer"
+                      >
+                        <Flag className="w-3.5 h-3.5 text-muted-foreground" />
+                        Report Post
+                      </button>
+                    )}
                   </div>
-                </>
-              )}
-            </div>
-          )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
             <div className="text-[15px] leading-relaxed text-ink/95 dark:text-zinc-200">
           <h4 className="font-extrabold text-[16px] text-ink dark:text-zinc-50 leading-snug mb-1">{post.title}</h4>
@@ -1009,7 +1044,7 @@ function PostCard({
               {(Object.keys(REACTION_META) as Reaction[]).map((rKey) => {
                 const rMeta = REACTION_META[rKey];
                 const active = hasReacted(post.id, rKey);
-                const count = post.reactions[rKey] || 0;
+                const count = (post.reactions || {})[rKey] || 0;
                 
                 return (
                   <button
@@ -1474,7 +1509,7 @@ function ShareButton({ postId, postTitle }: { postId: string; postTitle: string 
   
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/post/${postId}`;
+    const url = `${window.location.origin}/feed?post=${postId}`;
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
@@ -1484,7 +1519,7 @@ function ShareButton({ postId, postTitle }: { postId: string; postTitle: string 
 
   const handleShareX = (e: React.MouseEvent) => {
     e.stopPropagation();
-    const url = `${window.location.origin}/post/${postId}`;
+    const url = `${window.location.origin}/feed?post=${postId}`;
     const text = encodeURIComponent(`"${postTitle}" - A vibe-coding confession on CodeConfessions #VibeFail`);
     const xUrl = `https://x.com/intent/tweet?text=${text}&url=${encodeURIComponent(url)}`;
     window.open(xUrl, "_blank");

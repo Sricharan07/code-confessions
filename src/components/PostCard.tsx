@@ -2,7 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { REACTION_META, type Post, timeAgo } from "@/lib/store";
 
 export function PostCard({ post, rank }: { post: Post; rank?: number }) {
-  const total = Object.values(post.reactions).reduce((a, b) => a + b, 0);
+  const total = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
   return (
     <Link to="/post/$id" params={{ id: post.id }} className="block">
       <article className="brutal-card p-5 sm:p-6 relative">
@@ -26,7 +26,7 @@ export function PostCard({ post, rank }: { post: Post; rank?: number }) {
             {(Object.keys(REACTION_META) as (keyof typeof REACTION_META)[]).map((k) => (
               <span key={k} className="mono text-xs font-bold flex items-center gap-1">
                 <span>{REACTION_META[k].emoji}</span>
-                <span>{post.reactions[k]}</span>
+                <span>{(post.reactions || {})[k] || 0}</span>
               </span>
             ))}
           </div>

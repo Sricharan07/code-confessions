@@ -13,7 +13,7 @@ export function ReactionBar({ post }: { post: Post }) {
           >
             <span className="text-base">{REACTION_META[k].emoji}</span>
             <span>{REACTION_META[k].label}</span>
-            <span className="opacity-60">{post.reactions[k]}</span>
+            <span className="opacity-60">{(post.reactions || {})[k] || 0}</span>
           </button>
         );
       })}

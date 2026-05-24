@@ -4,7 +4,7 @@ import { updatePost, useStore, getAvatarUrl, logout, setTheme, setAuthUser } fro
 import { HeadlineInput } from "@/components/confess/HeadlineInput";
 import { SuspectPicker } from "@/components/confess/SuspectPicker";
 import { CrimeSceneTextarea } from "@/components/confess/CrimeSceneTextarea";
-import { VibePicker, VerdictPicker, PleaPicker } from "@/components/confess/FlairsPickers";
+import { VibePicker } from "@/components/confess/FlairsPickers";
 import { AIDefenseInput } from "@/components/confess/AIDefenseInput";
 import { MemeCard } from "@/components/confess/MemeCard";
 import { SidebarV2 } from "@/components/v2/SidebarV2";
@@ -25,7 +25,7 @@ function EditPost() {
   // Redirect if not found
   useEffect(() => {
     if (posts.length > 0 && !post) {
-      router.navigate({ to: "/" });
+      router.navigate({ to: "/feed" });
     }
   }, [posts, post, router]);
 
@@ -83,11 +83,11 @@ function EditPost() {
   }, []);
 
   const navItems = [
-    { label: "Home", icon: Home, to: "/", search: {} },
-    { label: "Popular", icon: TrendingUp, to: "/", search: { tab: "popular" } },
-    { label: "Following", icon: BookOpen, to: "/", search: { tab: "followers" } },
-    { label: "Explore", icon: Compass, to: "/", search: { tab: "explore" } },
-    { label: "Activity", icon: Bell, to: "/", search: { tab: "activity" } },
+    { label: "Home", icon: Home, to: "/feed", search: {} },
+    { label: "Popular", icon: TrendingUp, to: "/feed", search: { tab: "popular" } },
+    { label: "Following", icon: BookOpen, to: "/feed", search: { tab: "followers" } },
+    { label: "Explore", icon: Compass, to: "/feed", search: { tab: "explore" } },
+    { label: "Activity", icon: Bell, to: "/feed", search: { tab: "activity" } },
   ];
 
   const handleMobileNavClick = (item: any, e: any) => {
@@ -156,7 +156,7 @@ function EditPost() {
         aiDefenseImage,
       });
 
-      router.navigate({ to: "/" });
+      router.navigate({ to: "/feed" });
     } catch (err: any) {
       console.error(err);
       const errMsg = err.message || "Failed to update the confession. Please try again.";
@@ -334,18 +334,9 @@ function EditPost() {
                   <div className="font-sans text-[10px] font-bold uppercase tracking-wider text-ink/40 dark:text-zinc-500">
                     02. Optional Flairs
                   </div>
-                  <button
-                    type="button"
-                    onClick={randomize}
-                    className="font-sans text-[10px] font-bold px-3 py-1 bg-hot/10 hover:bg-hot/20 text-hot rounded-full border border-hot/25 transition-colors cursor-pointer"
-                  >
-                    🎲 RANDOMIZE FLAIRS
-                  </button>
                 </div>
 
                 <VibePicker value={vibe} onChange={setVibe} />
-                <VerdictPicker value={verdict} onChange={setVerdict} />
-                <PleaPicker value={plea} onChange={setPlea} />
               </div>
 
               {/* Section 3: AI's Defense */}

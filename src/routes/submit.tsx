@@ -321,13 +321,6 @@ function Submit() {
               <div className="font-sans text-[10px] font-bold uppercase tracking-wider text-ink/40 dark:text-zinc-500">
                 02. Optional Flairs
               </div>
-              <button
-                type="button"
-                onClick={randomize}
-                className="font-sans text-[10px] font-bold px-3 py-1 bg-hot/10 hover:bg-hot/20 text-hot rounded-full border border-hot/25 transition-colors cursor-pointer"
-              >
-                🎲 RANDOMIZE FLAIRS
-              </button>
             </div>
 
             <VibePicker value={vibe} onChange={setVibe} />

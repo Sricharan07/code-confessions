@@ -21,8 +21,8 @@ function Index() {
     return [...posts]
       .filter((p) => !p.hidden)
       .sort((a, b) => {
-        const sumA = Object.values(a.reactions).reduce((sum, v) => sum + v, 0);
-        const sumB = Object.values(b.reactions).reduce((sum, v) => sum + v, 0);
+        const sumA = Object.values(a.reactions || {}).reduce((sum, v) => sum + v, 0);
+        const sumB = Object.values(b.reactions || {}).reduce((sum, v) => sum + v, 0);
         return sumB - sumA;
       })
       .slice(0, 3);
@@ -84,7 +84,7 @@ function Index() {
           </div>
           <div className="grid md:grid-cols-3 gap-6">
             {featuredDisasters.map((post) => {
-              const reactionsSum = Object.values(post.reactions).reduce((sum, val) => sum + val, 0);
+              const reactionsSum = Object.values(post.reactions || {}).reduce((sum, val) => sum + val, 0);
               return (
                 <Link 
                   key={post.id}

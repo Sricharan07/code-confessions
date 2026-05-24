@@ -313,10 +313,13 @@ function init() {
   // 2. Fetch initial posts and comments from worker
   (async () => {
     try {
+      console.log("[store init] Fetching posts and comments...");
       const [postsData, commentsData] = await Promise.all([
         apiCall("/api/posts", "GET"),
         apiCall("/api/comments", "GET"),
       ]);
+      console.log("[store init] Fetched postsData length:", Array.isArray(postsData) ? postsData.length : typeof postsData);
+      console.log("[store init] Fetched commentsData length:", Array.isArray(commentsData) ? commentsData.length : typeof commentsData);
 
       if (Array.isArray(postsData)) {
         posts = postsData.map(mapPostFromDb);
@@ -325,9 +328,10 @@ function init() {
         comments = commentsData.map(mapCommentFromDb);
       }
       loading = false;
+      console.log("[store init] Setting loading = false");
       persist();
     } catch (err) {
-      console.error("Failed to load initial data:", err);
+      console.error("[store init] Failed to load initial data:", err);
       loading = false;
       persist();
     }
@@ -355,6 +359,7 @@ function init() {
 }
 
 function persist() {
+  console.log("[store persist] called! Posts:", posts.length, "Comments:", comments.length, "User:", user ? user.username : null, "Loading:", loading);
   if (typeof window !== "undefined") {
     try {
       localStorage.setItem("vibefail.theme.v1", JSON.stringify(theme));

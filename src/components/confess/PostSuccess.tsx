@@ -34,7 +34,7 @@ export function PostSuccess({
   };
 
   const handleShareToX = async () => {
-    const url = typeof window !== "undefined" ? `${window.location.origin}/post/${postId}` : "";
+    const url = typeof window !== "undefined" ? `${window.location.origin}/feed?post=${postId}` : "";
     const shareText = `"${headline}" — confessed on @vibefail ${url}`;
 
     if (typeof navigator !== "undefined" && navigator.share) {
@@ -132,8 +132,8 @@ export function PostSuccess({
 
         <div className="border-t border-ink/10 pt-4 text-center">
           <Link
-            to="/post/$id"
-            params={{ id: postId }}
+            to="/feed"
+            search={{ post: postId } as any}
             className="inline-block font-sans text-xs font-semibold hover:text-hot text-ink/75 hover:underline transition-colors"
           >
             → SEE UR POST DETAIL PAGE

@@ -10,6 +10,7 @@ type FeedSearchParams = {
   tab?: string;
   compose?: string;
   post?: string;
+  user?: string;
 };
 
 export const Route = createFileRoute("/feed")({
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/feed")({
       tab: search.tab as string | undefined,
       compose: search.compose as string | undefined,
       post: search.post as string | undefined,
+      user: search.user as string | undefined,
     };
   },
   component: V2Layout,
@@ -66,8 +68,8 @@ function V2Layout() {
   const popularConfessions = [...posts]
     .filter((p) => !p.hidden)
     .sort((a, b) => {
-      const sumA = (Object.values(a.reactions) as number[]).reduce((sum, v) => sum + v, 0);
-      const sumB = (Object.values(b.reactions) as number[]).reduce((sum, v) => sum + v, 0);
+      const sumA = (Object.values(a.reactions || {}) as number[]).reduce((sum, v) => sum + v, 0);
+      const sumB = (Object.values(b.reactions || {}) as number[]).reduce((sum, v) => sum + v, 0);
       return sumB - sumA;
     })
     .slice(0, 4);
@@ -270,7 +272,7 @@ function V2Layout() {
             <h3 className="font-bold text-[12px] mb-4 text-muted-foreground uppercase tracking-widest border-b border-ink/5 dark:border-zinc-800/80 pb-2">Popular Confessions</h3>
             <div className="space-y-5">
               {popularConfessions.map((post) => {
-                const totalReactions = Object.values(post.reactions).reduce((a, b) => a + b, 0);
+                const totalReactions = Object.values(post.reactions || {}).reduce((a, b) => a + b, 0);
                 return (
                   <Link 
                     key={post.id} 
